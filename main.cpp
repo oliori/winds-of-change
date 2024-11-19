@@ -69,10 +69,12 @@ namespace woc {
 
     struct PlayerState {
         f32 pos_x;
+        f32 vel;
+        f32 accel;
     };
 
     struct InputState {
-        f32 desired_movement;
+        i32 move_dir;
     };
 
     struct GameState {
@@ -86,14 +88,28 @@ namespace woc {
 
         auto move_left = IsKeyDown(KEY_A);
         auto move_right = IsKeyDown(KEY_D);
-        input.desired_movement = (f32)move_right - (f32)move_left;
+        input.move_dir = (i32)move_right - (i32)move_left;
     }
 
     void game_update(GameState& game_state, f32 delta_seconds) {
-        constexpr f32 DEFAULT_MOVE_SPEED = 250.0f;
-        game_state.player.pos_x += game_state.input.desired_movement * delta_seconds * DEFAULT_MOVE_SPEED;
+        constexpr f32 PLAYER_MIN_VEL = -250.0f;
+        constexpr f32 PLAYER_MAX_VEL = 250.0f;
+        constexpr f32 PLAYER_ACCELERATION = 250.0f;
+        constexpr f32 GROUND_FRICTION = 100.0f;
+
+        game_state.player.accel = (f32)game_state.input.move_dir * PLAYER_ACCELERATION;
+        if (game_state.player.vel < 0.0f) {
+            game_state.player.accel += GROUND_FRICTION;
+        } else {
+            game_state.player.accel -= GROUND_FRICTION;
+        }
+        // TODO: Friction should let you go in the opposite direction.
+
+        game_state.player.vel += game_state.player.accel * delta_seconds;
+        game_state.player.vel = Clamp(game_state.player.vel, PLAYER_MIN_VEL, PLAYER_MAX_VEL);
+
+        game_state.player.pos_x += game_state.player.vel * delta_seconds;
         game_state.player.pos_x = Clamp(game_state.player.pos_x, WORLD_MIN.x, WORLD_MAX.x);
-//        std::cout << "DS: " << delta_seconds << ", movement is " << game_state.input.desired_movement << std::endl;
     }
 
     struct Renderer {
@@ -115,10 +131,6 @@ namespace woc {
             .rotation = cam.rot.val * RAD2DEG,
             .zoom = (framebuffer_size.y / cam.height) * cam.zoom
         });
-
-        //auto screen_pos = Vector2Transform(Vector2{ 100.0, 0.0 }, camera_matrix);
-        auto pos = Vector2{ 0, 0 };
-        DrawText("Congrats! You created your first window!", (i32)pos.x, (i32)pos.y, 20, LIGHTGRAY);
 
         DrawRectangle((i32)player.pos_x, (i32)PLAYER_WORLD_Y, 50, 50, RED);
 
