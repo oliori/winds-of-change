@@ -3,6 +3,8 @@
 
 #include <cstdint>
 #include <iostream>
+#include <optional>
+#include <span>
 
 namespace woc {
     using i8 = int8_t;
@@ -16,9 +18,13 @@ namespace woc {
     using f32 = float;
     using f64 = double;
 
-    constexpr Vector2 WORLD_MIN = Vector2{ -250, -500 };
-    constexpr Vector2 WORLD_MAX = Vector2{ 250, 500 };
+    constexpr Vector2 WORLD_MIN = Vector2{ -400, -500 };
+    constexpr Vector2 WORLD_MAX = Vector2{ 400, 500 };
     constexpr f32 PLAYER_WORLD_Y = 400.f;
+    constexpr f32 ENEMIES_WORLD_Y = -400.f;
+    constexpr u16 ENEMIES_MAX_ROWS = 3;
+    constexpr u16 ENEMIES_MAX_COLUMNS = 10;
+    constexpr u16 ENEMY_X_SPACING = 25.f;
 
     struct Window {
         u32 width;
@@ -28,7 +34,7 @@ namespace woc {
     Window window_init() {
         constexpr u32 w = 1280;
         constexpr u32 h = 720;
-        InitWindow(static_cast<i32>(w), static_cast<i32>(h), "Winds of Change");
+        InitWindow(w, h, "Winds of Change");
         return Window{ .width = w, .height = h };
     }
 
@@ -41,7 +47,7 @@ namespace woc {
     }
 
     Vector2 window_size(Window& window) {
-        auto result = Vector2{ (f32) window.width, (f32) window.height };
+        auto result = Vector2{ static_cast<f32>(window.width), static_cast<f32>(window.height) };
         return result;
     }
 
@@ -50,7 +56,7 @@ namespace woc {
     }
 
     f32 window_seconds_since_init(Window& window) {
-        return GetTime();
+        return static_cast<f32>(GetTime());
     }
 
     struct Radian {
@@ -72,6 +78,10 @@ namespace woc {
         f32 vel;
         f32 accel;
     };
+    
+    struct EnemyState {
+        f32 health;
+    };
 
     struct InputState {
         i32 move_dir;
@@ -80,6 +90,7 @@ namespace woc {
     struct GameState {
         InputState input;
         PlayerState player;
+        std::optional<EnemyState> enemies[ENEMIES_MAX_ROWS][ENEMIES_MAX_COLUMNS];
         Camera cam;
     };
 
@@ -88,7 +99,7 @@ namespace woc {
 
         auto move_left = IsKeyDown(KEY_A);
         auto move_right = IsKeyDown(KEY_D);
-        input.move_dir = (i32)move_right - (i32)move_left;
+        input.move_dir = static_cast<i32>(move_right) - static_cast<i32>(move_left);
     }
 
     void game_update(GameState& game_state, f32 delta_seconds) {
@@ -132,7 +143,27 @@ namespace woc {
             .zoom = (framebuffer_size.y / cam.height) * cam.zoom
         });
 
-        DrawRectangle((i32)player.pos_x, (i32)PLAYER_WORLD_Y, 50, 50, RED);
+        DrawRectangle(static_cast<i32>(player.pos_x), static_cast<i32>(PLAYER_WORLD_Y), 50, 50, RED);
+
+
+        i32 total_spacing = ENEMY_X_SPACING * (ENEMIES_MAX_COLUMNS + 1); // +1 as the final element will need spacing in both sides
+        i32 x_spacing = static_cast<i32>((WORLD_MAX.x - WORLD_MIN.x - static_cast<f32>(total_spacing)) / static_cast<f32>(ENEMIES_MAX_COLUMNS));
+        i32 y_pos = static_cast<i32>(ENEMIES_WORLD_Y);
+        for (auto& row : game_state.enemies)
+        {
+            i32 x_pos = static_cast<i32>(WORLD_MIN.x) + ENEMY_X_SPACING;
+            for (auto& enemy : row)
+            {
+                if (enemy)
+                {
+                    DrawRectangle(x_pos, y_pos, 50, 50, BLUE);
+                }
+
+                x_pos += x_spacing + ENEMY_X_SPACING;
+            }
+
+            y_pos += 100;
+        }
 
         EndMode2D();
     }
@@ -158,13 +189,21 @@ int main()
             .zoom = 1.0f,
         }
     };
+    for (auto i = 0; i < woc::ENEMIES_MAX_ROWS; i++)
+    {
+        for (auto j = 0; j < woc::ENEMIES_MAX_COLUMNS; j++)
+        {
+            game_state.enemies[i][j] = woc::EnemyState {
+                .health = 10.f
+            };
+        }
+    }
 
     // TODO: Edit raylib config and disable rmodels
 
     while (woc::window_is_running(window))
     {
         auto delta_seconds = woc::window_delta_seconds(window);
-
         woc::game_input(game_state.input);
         woc::game_update(game_state, delta_seconds);
 
