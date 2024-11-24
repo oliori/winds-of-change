@@ -100,13 +100,9 @@ namespace woc {
         f32 shoot_cd;
     };
 
-    struct MenuInputState {
-        bool page_to_previous;
-    };
     struct GameInputState {
         i32 move_dir;
         bool use_ability_1;
-        bool page_to_previous;
     };
 
     struct Projectile
@@ -117,7 +113,6 @@ namespace woc {
 
     enum class MenuPageType
     {
-        Game,
         MainMenu,
         Settings,
         Quit
@@ -125,12 +120,9 @@ namespace woc {
     struct MenuState
     {
         MenuPageType current_page;
-        MenuPageType previous_page;
-        MenuInputState input_state;
     };
 
     struct GameState {
-        MenuState menu_state;
         GameInputState input;
         PlayerState player;
         Camera cam;
@@ -142,6 +134,50 @@ namespace woc {
     struct GameFrameTempData
     {
         std::vector<u32> hit_indices;
+    };
+    
+    struct Renderer {
+    };
+
+    enum class AppFlags : u32
+    {
+        None = 0,
+        HasRunningGame = 1 << 0,
+        IsInGame = 1 << 1,
+        NewGame = 1 << 2,
+    };
+    AppFlags app_flags_if(AppFlags flags, bool condition)
+    {
+        return static_cast<AppFlags>(static_cast<u32>(condition) * static_cast<u32>(flags));
+    }
+    bool app_has_all_flags(AppFlags& flags, AppFlags value)
+    {
+        return (static_cast<u32>(flags) & static_cast<u32>(value)) == static_cast<u32>(value);
+    }
+    bool app_has_any_flags(AppFlags& flags, AppFlags value)
+    {
+        return (static_cast<u32>(flags) & static_cast<u32>(value));
+    }
+    void app_add_flags(AppFlags& flags, AppFlags value)
+    {
+        flags = static_cast<AppFlags>(static_cast<u32>(flags) | static_cast<u32>(value));
+    }
+    void app_remove_flags(AppFlags& flags, AppFlags value)
+    {
+        flags = static_cast<AppFlags>(static_cast<u32>(flags) & (~static_cast<u32>(value)));
+    }
+    void app_toggle_flags(AppFlags& flags, AppFlags value)
+    {
+        flags = static_cast<AppFlags>(static_cast<u32>(flags) ^ static_cast<u32>(value));
+    }
+    
+    struct AppState
+    {
+        AppFlags flags;
+        Renderer renderer;
+        MenuState menu_state;
+        GameState game_state;
+        Window window;
     };
     
     woc_internal Vector2 player_pos(PlayerState& player_state)
@@ -163,20 +199,39 @@ namespace woc {
         };
         return result;
     }
-    
-    void menu_input(MenuInputState& input) {
-        PollInputEvents();
-        input.page_to_previous = IsKeyPressed(KEY_ESCAPE);
+
+    GameState game_init()
+    {
+        auto result = woc::GameState{
+            .player = woc::PlayerState {
+                .pos_x = 0.f
+            },
+            .cam = woc::Camera {
+                .pos = Vector2 { 0.0, 0.0 },
+                .height = woc::WORLD_MAX.y - woc::WORLD_MIN.y,
+                .rot = woc::Radian { 0.0 },
+                .zoom = 1.0f,
+            }
+        };
+        
+        for (auto i = 0; i < woc::ENEMIES_MAX_ROWS; i++)
+        {
+            for (auto j = 0; j < woc::ENEMIES_MAX_COLUMNS; j++)
+            {
+                result.enemies[i][j] = woc::EnemyState {
+                    .health = 10.f
+                };
+            }
+        }
+
+        return result;
     }
 
     void game_input(GameInputState& input) {
-        PollInputEvents();
-
         auto move_left = IsKeyDown(KEY_A);
         auto move_right = IsKeyDown(KEY_D);
         input.move_dir = static_cast<i32>(move_right) - static_cast<i32>(move_left);
         input.use_ability_1 = IsKeyPressed(KEY_SPACE);
-        input.page_to_previous = IsKeyPressed(KEY_ESCAPE);
     }
 
     void game_update(GameState& game_state, f32 delta_seconds) {
@@ -254,17 +309,7 @@ namespace woc {
                 }
             }
         }
-
-        if (game_state.input.page_to_previous)
-        {
-            game_state.menu_state.current_page = game_state.menu_state.previous_page;
-            game_state.menu_state.previous_page = MenuPageType::Game;
-        }
     }
-
-    struct Renderer {
-
-    };
 
     void renderer_prepare_rendering([[maybe_unused]]Renderer& renderer) {
         BeginDrawing();
@@ -330,49 +375,41 @@ namespace woc {
         return result;
     }
     
-    void renderer_update_and_render_menu(Renderer& renderer, MenuState& menu_state, Vector2 framebuffer_size)
+    void renderer_update_and_render_menu(Renderer& renderer, MenuState& menu_state, Vector2 framebuffer_size, AppFlags& flags)
     {
-        if (menu_state.input_state.page_to_previous)
-        {
-            menu_state.current_page = menu_state.previous_page;
-            menu_state.previous_page = MenuPageType::MainMenu;
-        }
-        
         auto button_spacing = 10.f;
         auto button_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.5f}, Vector2 { 200.f, 50.f }, Vector2{0.5f, 0.0f});
-        if (GuiButton(button_rect, "PLAY"))
+        if (GuiButton(button_rect, "NEW GAME"))
         {
-            menu_state.previous_page = MenuPageType::MainMenu;
-            menu_state.current_page = MenuPageType::Game;
+            app_add_flags(flags, AppFlags::NewGame);
+            app_add_flags(flags, AppFlags::IsInGame);
         }
         button_rect.y += button_rect.height + button_spacing;
+        if (app_has_any_flags(flags, AppFlags::HasRunningGame))
+        {
+            if (GuiButton(button_rect, "CONTINUE"))
+            {
+                app_add_flags(flags, AppFlags::IsInGame);
+            }
+            button_rect.y += button_rect.height + button_spacing;
+        }
         if (GuiButton(button_rect, "SETTINGS"))
         {
-            menu_state.previous_page = MenuPageType::MainMenu;
             menu_state.current_page = MenuPageType::Settings;
         }
         button_rect.y += button_rect.height + button_spacing;
         if (GuiButton(button_rect, "QUIT"))
         {
-            menu_state.previous_page = MenuPageType::MainMenu;
             menu_state.current_page = MenuPageType::Quit;
         }
     }
     
     void renderer_update_and_render_settings(Renderer& renderer, MenuState& menu_state, Vector2 framebuffer_size)
     {
-        if (menu_state.input_state.page_to_previous)
-        {
-            menu_state.current_page = menu_state.previous_page;
-            menu_state.previous_page = MenuPageType::MainMenu;
-        }
-        
-        auto button_spacing = 10.f;
         auto button_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.5f}, Vector2 { 200.f, 50.f }, Vector2{0.5f, 0.0f});
         if (GuiButton(button_rect, "BACK"))
         {
             menu_state.current_page = MenuPageType::MainMenu;
-            menu_state.previous_page = MenuPageType::Settings;
         }
     }
 
@@ -383,82 +420,90 @@ namespace woc {
 
 int main()
 {
-    auto window = woc::window_init();
-    auto renderer = woc::Renderer{};
-    auto game_state = woc::GameState{
-        .player = woc::PlayerState {
-            .pos_x = 0.f
+    // Doesn't need smart pointers as when it goes out of scope, the app exits and OS cleans it up
+    auto app = woc::AppState {
+        .menu_state = woc::MenuState {
+            .current_page = woc::MenuPageType::MainMenu,
         },
-        .cam = woc::Camera {
-            .pos = Vector2 { 0.0, 0.0 },
-            .height = woc::WORLD_MAX.y - woc::WORLD_MIN.y,
-            .rot = woc::Radian { 0.0 },
-            .zoom = 1.0f,
-        }
+        .window = woc::window_init(),
     };
-    game_state.menu_state.current_page = woc::MenuPageType::MainMenu;
-    game_state.menu_state.previous_page = woc::MenuPageType::MainMenu;
-    
-    for (auto i = 0; i < woc::ENEMIES_MAX_ROWS; i++)
-    {
-        for (auto j = 0; j < woc::ENEMIES_MAX_COLUMNS; j++)
-        {
-            game_state.enemies[i][j] = woc::EnemyState {
-                .health = 10.f
-            };
-        }
-    }
 
     // TODO: Edit raylib config and disable rmodels
 
-    while (woc::window_is_running(window) && game_state.menu_state.current_page != woc::MenuPageType::Quit)
+    bool keep_running_app = woc::window_is_running(app.window);
+    while (keep_running_app)
     {
-        auto delta_seconds = woc::window_delta_seconds(window);
-        switch (game_state.menu_state.current_page)
+        auto delta_seconds = woc::window_delta_seconds(app.window);
+        PollInputEvents();
+        if (IsKeyPressed(KEY_ESCAPE))
         {
-            case woc::MenuPageType::Game:
-            {
-                woc::game_input(game_state.input);
-                woc::game_update(game_state, delta_seconds);
-                if (woc::window_is_visible(window))
-                {
-                    auto window_size = woc::window_size(window);
-                    woc::renderer_prepare_rendering(renderer);
-                    woc::renderer_render_world(renderer, game_state, window_size);
-                    woc::renderer_finalize_rendering(renderer);
-                }
-                break;
-            }
-            case woc::MenuPageType::MainMenu:
-            {
-                woc::menu_input(game_state.menu_state.input_state);
-                if (woc::window_is_visible(window))
-                {
-                    auto window_size = woc::window_size(window);
-                    woc::renderer_prepare_rendering(renderer);
-                    woc::renderer_update_and_render_menu(renderer, game_state.menu_state, window_size);
-                    woc::renderer_finalize_rendering(renderer);
-                }
-                break;
-            }
-            case woc::MenuPageType::Settings:
-            {
-                woc::menu_input(game_state.menu_state.input_state);
-                if (woc::window_is_visible(window))
-                {
-                    auto window_size = woc::window_size(window);
-                    woc::renderer_prepare_rendering(renderer);
-                    woc::renderer_update_and_render_settings(renderer, game_state.menu_state, window_size);
-                    woc::renderer_finalize_rendering(renderer);
-                }
-                break;
-            }
-            default: assert(false);
+            woc::app_toggle_flags(app.flags, woc::app_flags_if(woc::AppFlags::IsInGame, woc::app_has_any_flags(app.flags, woc::AppFlags::HasRunningGame)));
         }
+        if (IsKeyPressed(KEY_Y))
+        {
+            woc::app_add_flags(app.flags, woc::AppFlags::NewGame);
+            woc::app_add_flags(app.flags, woc::AppFlags::IsInGame);
+        }
+
+        
+        if (woc::app_has_any_flags(app.flags, woc::AppFlags::NewGame))
+        {
+            app.game_state = woc::game_init();
+            woc::app_add_flags(app.flags, woc::AppFlags::HasRunningGame);
+            woc::app_remove_flags(app.flags, woc::AppFlags::NewGame);
+        }
+        
+        if (woc::app_has_any_flags(app.flags, woc::AppFlags::IsInGame))
+        {
+            woc::game_input(app.game_state.input);
+            woc::game_update(app.game_state, delta_seconds);
+            if (woc::window_is_visible(app.window))
+            {
+                auto window_size = woc::window_size(app.window);
+                woc::renderer_prepare_rendering(app.renderer);
+                woc::renderer_render_world(app.renderer, app.game_state, window_size);
+                woc::renderer_finalize_rendering(app.renderer);
+            }
+        } else
+        {
+            switch (app.menu_state.current_page)
+            {
+                case woc::MenuPageType::MainMenu:
+                {
+                    if (woc::window_is_visible(app.window))
+                    {
+                        auto window_size = woc::window_size(app.window);
+                        woc::renderer_prepare_rendering(app.renderer);
+                        woc::renderer_update_and_render_menu(app.renderer, app.menu_state, window_size, app.flags);
+                        woc::renderer_finalize_rendering(app.renderer);
+                    }
+                    break;
+                }
+                case woc::MenuPageType::Settings:
+                {
+                    if (woc::window_is_visible(app.window))
+                    {
+                        auto window_size = woc::window_size(app.window);
+                        woc::renderer_prepare_rendering(app.renderer);
+                        woc::renderer_update_and_render_settings(app.renderer, app.menu_state, window_size);
+                        woc::renderer_finalize_rendering(app.renderer);
+                    }
+                    break;
+                }
+                case woc::MenuPageType::Quit:
+                {
+                    keep_running_app = false;
+                    break;
+                }
+                default: assert(false);
+            }
+        }
+
+        keep_running_app &= woc::window_is_running(app.window);
     }
 
-    // Likely unnecessary before a program exit. OS cleans up. 
-    woc::window_deinit(window);
+    // Unnecessary before a program exit. OS cleans up. 
+    woc::window_deinit(app.window);
 
     return 0;
 }
