@@ -28,6 +28,7 @@ namespace woc {
     constexpr Vector2 WORLD_MIN = Vector2{ -400, -500 };
     constexpr Vector2 WORLD_MAX = Vector2{ 400, 500 };
     constexpr f32 PLAYER_WORLD_Y = 400.f;
+    constexpr f32 PLAYER_DEFAULT_SIZE = 50.f;
     constexpr f32 ENEMIES_WORLD_Y = -400.f;
     constexpr u16 ENEMIES_MAX_ROWS = 3;
     constexpr u16 ENEMIES_MAX_COLUMNS = 10;
@@ -90,9 +91,11 @@ namespace woc {
     };
 
     struct PlayerState {
+        f32 health;
         f32 pos_x;
         f32 vel;
         f32 accel;
+        f32 size;
     };
     
     struct EnemyState {
@@ -107,6 +110,7 @@ namespace woc {
 
     struct Projectile
     {
+        f32 damage;
         Vector2 pos;
         Vector2 dir;
     };
@@ -204,7 +208,9 @@ namespace woc {
     {
         auto result = woc::GameState{
             .player = woc::PlayerState {
-                .pos_x = 0.f
+                .health = 100.f,
+                .pos_x = 0.f,
+                .size = PLAYER_DEFAULT_SIZE
             },
             .cam = woc::Camera {
                 .pos = Vector2 { 0.0, 0.0 },
@@ -258,14 +264,14 @@ namespace woc {
             std::optional<u32> chosen_projectile{};
             auto& enemy_projectiles = game_state.enemy_projectiles; 
             constexpr f32 RICHOCHET_RADIUS = 100.f;
-            auto closeest_radius_sqr = RICHOCHET_RADIUS * RICHOCHET_RADIUS;
+            auto closest_radius_sqr = RICHOCHET_RADIUS * RICHOCHET_RADIUS;
             for (size_t i = 0; i < enemy_projectiles.size(); i++)
             {
                 auto& p = enemy_projectiles[i];
                 auto dist_to_player_sqr = Vector2DistanceSqr(p.pos, player_pos(game_state.player));
-                if (dist_to_player_sqr < closeest_radius_sqr)
+                if (dist_to_player_sqr < closest_radius_sqr)
                 {
-                    closeest_radius_sqr = dist_to_player_sqr;
+                    closest_radius_sqr = dist_to_player_sqr;
                     chosen_projectile = i;
                 }
             }
@@ -286,6 +292,11 @@ namespace woc {
         {
             constexpr f32 PROJECTILE_SPEED = 150.f;
             projectile.pos = Vector2Add(projectile.pos, Vector2Scale(projectile.dir, delta_seconds * PROJECTILE_SPEED));
+            
+            if (Vector2DistanceSqr(projectile.pos, player_pos(game_state.player)) < game_state.player.size)
+            {
+                game_state.player.health -= projectile.damage;
+            }
         }
 
         constexpr f32 DEFAULT_ENEMY_SHOOT_CD = 15.f;
@@ -302,6 +313,7 @@ namespace woc {
                         auto enemy_pos = enemy_pos_from_row_column(r, c);
                         auto projectile_dir = Vector2Normalize(Vector2Subtract(player_pos(game_state.player), enemy_pos));
                         game_state.enemy_projectiles.emplace_back(Projectile {
+                            .damage = 10.f,
                             .pos = enemy_pos,
                             .dir = projectile_dir
                         });
@@ -327,7 +339,7 @@ namespace woc {
             .zoom = (framebuffer_size.y / cam.height) * cam.zoom
         });
 
-        DrawRectangle(static_cast<i32>(player.pos_x), static_cast<i32>(PLAYER_WORLD_Y), 50, 50, RED);
+        DrawCircle(static_cast<i32>(player.pos_x), static_cast<i32>(PLAYER_WORLD_Y), player.size / 2.0f, RED);
 
 
         for (u16 r = 0; r < ENEMIES_MAX_ROWS; r++)
@@ -339,7 +351,7 @@ namespace woc {
                     auto pos = enemy_pos_from_row_column(r, c);
                     auto px = static_cast<i32>(pos.x);
                     auto py = static_cast<i32>(pos.y);
-                    DrawRectangle(px, py, 50, 50, BLUE);
+                    DrawCircle(px, py, 25, BLUE);
                 }
             }
         }
@@ -348,14 +360,14 @@ namespace woc {
         {
             auto px = static_cast<i32>(projectile.pos.x);
             auto py = static_cast<i32>(projectile.pos.y);
-            DrawRectangle(px, py, 10, 20, SKYBLUE);
+            DrawCircle(px, py, 10, SKYBLUE);
         }
         
         for (auto& projectile : game_state.player_projectiles)
         {
             auto px = static_cast<i32>(projectile.pos.x);
             auto py = static_cast<i32>(projectile.pos.y);
-            DrawRectangle(px, py, 10, 20, PINK);
+            DrawCircle(px, py, 10, PINK);
         }
 
         EndMode2D();
@@ -455,8 +467,11 @@ int main()
         
         if (woc::app_has_any_flags(app.flags, woc::AppFlags::IsInGame))
         {
-            woc::game_input(app.game_state.input);
-            woc::game_update(app.game_state, delta_seconds);
+            if (app.game_state.player.health > 0.f)
+            {
+                woc::game_input(app.game_state.input);
+                woc::game_update(app.game_state, delta_seconds);
+            }
             if (woc::window_is_visible(app.window))
             {
                 auto window_size = woc::window_size(app.window);
