@@ -122,15 +122,17 @@ namespace woc
         std::vector<Projectile> player_projectiles;
         std::vector<Projectile> enemy_projectiles;
     };
+    GameState game_init();
+    void game_update(GameState& game_state, InputState& input, f32 delta_seconds);
+    void game_load_level(GameState& game_state);
 
-    struct GameFrameTempData
-    {
-        std::vector<u32> hit_indices;
-    };
-    
     struct Renderer {
     };
-    
+    void renderer_update_and_render_menu(Renderer& renderer, MenuState& menu_state, std::optional<GameState>& game_state, Vector2 framebuffer_size);
+    void renderer_update_and_render_settings(Renderer& renderer, MenuState& menu_state, Vector2 framebuffer_size);
+    void renderer_render_world(Renderer& renderer, GameState& game_state, Vector2 framebuffer_size);
+    void renderer_finalize_rendering(Renderer& renderer);
+    void renderer_prepare_rendering(Renderer& renderer);
 
     struct Level
     {
