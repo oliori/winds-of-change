@@ -39,8 +39,7 @@ int main()
         app_input_state.wind_dir_x = static_cast<woc::i32>(wind_right) - static_cast<woc::i32>(wind_left);
         app_input_state.wind_dir_y = static_cast<woc::i32>(wind_up) - static_cast<woc::i32>(wind_down);
         
-        app_input_state.start_ricochet_ability += IsKeyPressed(KEY_SPACE);
-        app_input_state.stop_ricochet_ability += IsKeyReleased(KEY_SPACE);
+        app_input_state.send_ball += IsKeyPressed(KEY_SPACE);
 
         is_window_visible = woc::window_is_visible(window);
         window_size = woc::window_size(window);
@@ -85,10 +84,7 @@ int main()
             }
             case woc::MenuPageType::Game:
             {
-                if (game_state->player.health > 0.f)
-                {
-                    woc::game_update(*game_state, input, delta_seconds);
-                }
+                woc::game_update(*game_state, input, delta_seconds);
                 if (*visible)
                 {
                     woc::renderer_prepare_rendering(renderer);
@@ -125,8 +121,6 @@ int main()
         auto input = temp;
         input.game_menu_swap -= game_input_state.game_menu_swap;
         input.new_game -= game_input_state.new_game;
-        input.start_ricochet_ability -= game_input_state.start_ricochet_ability;
-        input.stop_ricochet_ability -= game_input_state.stop_ricochet_ability;
         game_input_state = temp;
         
         update_game(input);
