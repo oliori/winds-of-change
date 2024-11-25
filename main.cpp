@@ -1,93 +1,36 @@
-#include "raylib.h"
-#include "raymath.h"
-#define RAYGUI_IMPLEMENTATION
-#include "raygui.h"
+#include "windsofchange.cpp"
+#include "window.cpp"
 
-#include <cstdint>
-#include <iostream>
-#include <optional>
-#include <vector>
-#include <cassert>
+// KNOWN ISSUES:
+// - Input lag. Move to another thread?
 
 namespace woc {
-    using i8 = int8_t;
-    using i16 = int16_t;
-    using i32 = int32_t;
-    using i64 = int64_t;
-    using u8 = uint8_t;
-    using u16 = uint16_t;
-    using u32 = uint32_t;
-    using u64 = uint64_t;
-    using f32 = float;
-    using f64 = double;
-
-#define woc_internal static
-#define woc_global static
-#define woc_local static
-
     constexpr Vector2 WORLD_MIN = Vector2{ -400, -500 };
     constexpr Vector2 WORLD_MAX = Vector2{ 400, 500 };
     constexpr f32 PLAYER_WORLD_Y = 400.f;
-    constexpr f32 PLAYER_DEFAULT_SIZE = 50.f;
+    constexpr f32 PLAYER_DEFAULT_SIZE = 25.f;
+    constexpr f32 ENEMY_DEFAULT_SIZE = 25.f;
     constexpr f32 ENEMIES_WORLD_Y = -400.f;
     constexpr u16 ENEMIES_MAX_ROWS = 3;
     constexpr u16 ENEMIES_MAX_COLUMNS = 10;
-
-    struct Window {
-        u32 width;
-        u32 height;
-    };
-
-    Window window_init() {
-        constexpr u32 w = 1920;
-        constexpr u32 h = 1080;
-        InitWindow(w, h, "Winds of Change");
-        // ESC is used for menu navigation, so it should not be the exit key
-        SetExitKey(0);
-        return Window{ .width = w, .height = h };
-    }
-    
-    void window_close([[maybe_unusued]]Window& window) {
-        CloseWindow();
-    }
-
-    bool window_is_running([[maybe_unusued]]Window& window) {
-        return !WindowShouldClose();
-    }
-    
-    bool window_is_visible([[maybe_unusued]]Window& window) {
-        return !IsWindowHidden();
-    }
-
-    void window_deinit(Window& window) {
-        CloseWindow();
-    }
-
-    Vector2 window_size(Window& window) {
-        auto result = Vector2{ static_cast<f32>(window.width), static_cast<f32>(window.height) };
-        return result;
-    }
-
-    f32 window_delta_seconds(Window& window) {
-        return GetFrameTime();
-    }
-
-    f32 window_seconds_since_init(Window& window) {
-        return static_cast<f32>(GetTime());
-    }
-
-    struct Radian {
-        f32 val;
-    };
-    struct Degree {
-        f32 val;
-    };
 
     struct Camera {
         Vector2 pos;
         f32 height;
         Radian rot;
         f32 zoom;
+    };
+    
+    struct RicochetState
+    {
+        bool is_active;
+        f32 channel_alpha;
+        f32 size;
+    };
+    struct ChangeWindState
+    {
+        f32 channel_time;
+        f32 size;
     };
 
     struct PlayerState {
@@ -96,6 +39,9 @@ namespace woc {
         f32 vel;
         f32 accel;
         f32 size;
+
+        RicochetState ricochet_state;
+        ChangeWindState change_wind_state;
     };
     
     struct EnemyState {
@@ -105,12 +51,16 @@ namespace woc {
 
     struct GameInputState {
         i32 move_dir;
-        bool use_ability_1;
+        bool start_ricochet_ability;
+        bool stop_ricochet_ability;
+        i32 wind_dir_x;
+        i32 wind_dir_y;
     };
 
     struct Projectile
     {
         f32 damage;
+        f32 size;
         Vector2 pos;
         Vector2 dir;
     };
@@ -127,6 +77,7 @@ namespace woc {
     };
 
     struct GameState {
+        f32 time_scale = 1.0f;
         GameInputState input;
         PlayerState player;
         Camera cam;
@@ -210,7 +161,10 @@ namespace woc {
             .player = woc::PlayerState {
                 .health = 100.f,
                 .pos_x = 0.f,
-                .size = PLAYER_DEFAULT_SIZE
+                .size = PLAYER_DEFAULT_SIZE,
+                .ricochet_state = {
+                    .size = 50.f
+                },
             },
             .cam = woc::Camera {
                 .pos = Vector2 { 0.0, 0.0 },
@@ -237,7 +191,16 @@ namespace woc {
         auto move_left = IsKeyDown(KEY_A);
         auto move_right = IsKeyDown(KEY_D);
         input.move_dir = static_cast<i32>(move_right) - static_cast<i32>(move_left);
-        input.use_ability_1 = IsKeyPressed(KEY_SPACE);
+        
+        auto wind_up = IsKeyDown(KEY_UP);
+        auto wind_down = IsKeyDown(KEY_DOWN);
+        auto wind_left = IsKeyDown(KEY_LEFT);
+        auto wind_right = IsKeyDown(KEY_RIGHT);
+        input.wind_dir_x = static_cast<i32>(wind_right) - static_cast<i32>(wind_left);
+        input.wind_dir_y = static_cast<i32>(wind_up) - static_cast<i32>(wind_down);
+        
+        input.start_ricochet_ability = IsKeyPressed(KEY_SPACE);
+        input.stop_ricochet_ability = IsKeyReleased(KEY_SPACE);
     }
 
     void game_update(GameState& game_state, f32 delta_seconds) {
@@ -245,6 +208,15 @@ namespace woc {
         constexpr f32 PLAYER_MAX_VEL = 250.0f;
         constexpr f32 PLAYER_ACCELERATION = 500.0f;
         constexpr f32 GROUND_FRICTION = 200.0f;
+
+        if (game_state.player.ricochet_state.is_active)
+        {
+            game_state.time_scale = 0.5f;
+        } else
+        {
+            game_state.time_scale = 1.0f;
+        }
+        delta_seconds *= game_state.time_scale;
 
         game_state.player.accel = (f32)game_state.input.move_dir * PLAYER_ACCELERATION;
         // TODO: Friction should let you go in the opposite direction.
@@ -259,45 +231,66 @@ namespace woc {
         game_state.player.pos_x += game_state.player.vel * delta_seconds;
         game_state.player.pos_x = Clamp(game_state.player.pos_x, WORLD_MIN.x, WORLD_MAX.x);
 
-        if (game_state.input.use_ability_1)
+        auto& ricochet = game_state.player.ricochet_state;
+        ricochet.is_active |= game_state.input.start_ricochet_ability;
+        if (game_state.input.stop_ricochet_ability || ricochet.channel_alpha >= 1.0f)
         {
-            std::optional<u32> chosen_projectile{};
-            auto& enemy_projectiles = game_state.enemy_projectiles; 
-            constexpr f32 RICHOCHET_RADIUS = 100.f;
-            auto closest_radius_sqr = RICHOCHET_RADIUS * RICHOCHET_RADIUS;
-            for (size_t i = 0; i < enemy_projectiles.size(); i++)
+            ricochet.is_active = false;
+            std::erase_if(game_state.enemy_projectiles, [player_pos = player_pos(game_state.player), player_size = game_state.player.size, &ricochet, &pp = game_state.player_projectiles] (Projectile& p)
             {
-                auto& p = enemy_projectiles[i];
-                auto dist_to_player_sqr = Vector2DistanceSqr(p.pos, player_pos(game_state.player));
-                if (dist_to_player_sqr < closest_radius_sqr)
+                auto actual_size = Lerp(player_size + ricochet.size * 0.25f, player_size + ricochet.size, ricochet.channel_alpha);
+                auto dist_to_player_sqr = Vector2DistanceSqr(p.pos, player_pos);
+                if (dist_to_player_sqr < (actual_size + p.size) * (actual_size + p.size))
                 {
-                    closest_radius_sqr = dist_to_player_sqr;
-                    chosen_projectile = i;
+                    auto dir_to_p = Vector2Normalize(Vector2Subtract(p.pos, player_pos));
+                    p.dir = dir_to_p;
+                    // TODO: Change damage
+                    pp.emplace_back(p);
+                    return true;
+                }
+                return false;
+            });
+            ricochet.channel_alpha = 0.f;
+        }
+        if (ricochet.is_active)
+        {
+            ricochet.channel_alpha = std::min(1.0f, ricochet.channel_alpha + delta_seconds);
+            
+        }
+
+        std::erase_if(game_state.enemy_projectiles, [delta_seconds, &player = game_state.player] (Projectile& projectile)
+        {
+            constexpr f32 PROJECTILE_SPEED = 300.f;
+            projectile.pos = Vector2Add(projectile.pos, Vector2Scale(projectile.dir, delta_seconds * PROJECTILE_SPEED));
+
+            if (Vector2DistanceSqr(projectile.pos, player_pos(player)) < (player.size + projectile.size) * (player.size + projectile.size))
+            {
+                player.health -= projectile.damage;
+                return true;
+            }
+            return false;
+        });
+
+        std::erase_if(game_state.player_projectiles, [delta_seconds, &enemies = game_state.enemies] (Projectile& projectile)
+        {
+            constexpr f32 PROJECTILE_SPEED = 300.f;
+            projectile.pos = Vector2Add(projectile.pos, Vector2Scale(projectile.dir, delta_seconds * PROJECTILE_SPEED));
+
+            for (u16 r = 0; r < ENEMIES_MAX_ROWS; r++)
+            {
+                for (u16 c = 0; c < ENEMIES_MAX_COLUMNS; c++)
+                {
+                    auto& e = enemies[r][c];
+                    if (e && Vector2DistanceSqr(projectile.pos, enemy_pos_from_row_column(r, c)) < (ENEMY_DEFAULT_SIZE + projectile.size) * (ENEMY_DEFAULT_SIZE + projectile.size))
+                    {
+                        e->health -= projectile.damage;
+                        return true;
+                    }
                 }
             }
 
-            if (chosen_projectile)
-            {
-                auto& projectile = enemy_projectiles[*chosen_projectile];
-                auto projectile_dir = Vector2Normalize(Vector2Subtract(projectile.pos, player_pos(game_state.player)));
-                projectile.dir = projectile_dir;
-                game_state.player_projectiles.emplace_back(projectile);
-                
-                std::swap(projectile, enemy_projectiles.back());
-                enemy_projectiles.pop_back();
-            }
-        }
-
-        for (auto& projectile : game_state.enemy_projectiles)
-        {
-            constexpr f32 PROJECTILE_SPEED = 150.f;
-            projectile.pos = Vector2Add(projectile.pos, Vector2Scale(projectile.dir, delta_seconds * PROJECTILE_SPEED));
-            
-            if (Vector2DistanceSqr(projectile.pos, player_pos(game_state.player)) < game_state.player.size)
-            {
-                game_state.player.health -= projectile.damage;
-            }
-        }
+            return false;
+        });
 
         constexpr f32 DEFAULT_ENEMY_SHOOT_CD = 15.f;
         for (u16 r = 0; r < ENEMIES_MAX_ROWS; r++)
@@ -306,6 +299,12 @@ namespace woc {
             {
                 if (auto& enemy = game_state.enemies[r][c])
                 {
+                    if (enemy->health <= 0.f)
+                    {
+                        enemy.reset();
+                        continue;
+                    }
+                    
                     enemy->shoot_cd -= delta_seconds;
                     if (enemy->shoot_cd <= 0.f)
                     {
@@ -339,7 +338,13 @@ namespace woc {
             .zoom = (framebuffer_size.y / cam.height) * cam.zoom
         });
 
-        DrawCircle(static_cast<i32>(player.pos_x), static_cast<i32>(PLAYER_WORLD_Y), player.size / 2.0f, RED);
+        auto& ricochet = game_state.player.ricochet_state;
+        if (ricochet.is_active | game_state.input.start_ricochet_ability)
+        {
+            auto ricochet_size = Lerp(game_state.player.size + ricochet.size * 0.25f, game_state.player.size + ricochet.size, ricochet.channel_alpha);
+            DrawCircle(static_cast<i32>(player.pos_x), static_cast<i32>(PLAYER_WORLD_Y), ricochet_size, PINK);
+        }
+        DrawCircle(static_cast<i32>(player.pos_x), static_cast<i32>(PLAYER_WORLD_Y), player.size, RED);
 
 
         for (u16 r = 0; r < ENEMIES_MAX_ROWS; r++)
@@ -351,7 +356,7 @@ namespace woc {
                     auto pos = enemy_pos_from_row_column(r, c);
                     auto px = static_cast<i32>(pos.x);
                     auto py = static_cast<i32>(pos.y);
-                    DrawCircle(px, py, 25, BLUE);
+                    DrawCircle(px, py, ENEMY_DEFAULT_SIZE, BLUE);
                 }
             }
         }
@@ -510,7 +515,6 @@ int main()
                     keep_running_app = false;
                     break;
                 }
-                default: assert(false);
             }
         }
 
