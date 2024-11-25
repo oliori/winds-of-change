@@ -59,10 +59,10 @@ namespace woc
 
     void game_update(GameState& game_state, InputState& input, f32 delta_seconds)
     {
-        constexpr f32 PLAYER_MIN_VEL = -500.0f;
-        constexpr f32 PLAYER_MAX_VEL = 500.0f;
-        constexpr f32 PLAYER_ACCELERATION = 1000.0f;
-        constexpr f32 GROUND_FRICTION = 400.0f;
+        constexpr f32 PLAYER_MIN_VEL = -750.0f;
+        constexpr f32 PLAYER_MAX_VEL = 750.0f;
+        constexpr f32 PLAYER_ACCELERATION = 1500.0f;
+        constexpr f32 GROUND_FRICTION = 750.0f;
 
         delta_seconds *= game_state.time_scale;
 
