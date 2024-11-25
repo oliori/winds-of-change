@@ -1,3 +1,5 @@
+#include <thread>
+
 #include "windsofchange.cpp"
 #include "window.cpp"
 
@@ -49,12 +51,15 @@ namespace woc {
         f32 shoot_cd;
     };
 
-    struct GameInputState {
+    struct InputState {
         i32 move_dir;
-        bool start_ricochet_ability;
-        bool stop_ricochet_ability;
         i32 wind_dir_x;
         i32 wind_dir_y;
+        
+        u32 start_ricochet_ability;
+        u32 stop_ricochet_ability;
+        u32 new_game;
+        u32 game_menu_swap;
     };
 
     struct Projectile
@@ -68,17 +73,18 @@ namespace woc {
     enum class MenuPageType
     {
         MainMenu,
+        Game,
         Settings,
         Quit
     };
     struct MenuState
     {
         MenuPageType current_page;
+        MenuPageType last_menu_page;
     };
 
     struct GameState {
         f32 time_scale = 1.0f;
-        GameInputState input;
         PlayerState player;
         Camera cam;
         std::optional<EnemyState> enemies[ENEMIES_MAX_ROWS][ENEMIES_MAX_COLUMNS];
@@ -92,47 +98,6 @@ namespace woc {
     };
     
     struct Renderer {
-    };
-
-    enum class AppFlags : u32
-    {
-        None = 0,
-        HasRunningGame = 1 << 0,
-        IsInGame = 1 << 1,
-        NewGame = 1 << 2,
-    };
-    AppFlags app_flags_if(AppFlags flags, bool condition)
-    {
-        return static_cast<AppFlags>(static_cast<u32>(condition) * static_cast<u32>(flags));
-    }
-    bool app_has_all_flags(AppFlags& flags, AppFlags value)
-    {
-        return (static_cast<u32>(flags) & static_cast<u32>(value)) == static_cast<u32>(value);
-    }
-    bool app_has_any_flags(AppFlags& flags, AppFlags value)
-    {
-        return (static_cast<u32>(flags) & static_cast<u32>(value));
-    }
-    void app_add_flags(AppFlags& flags, AppFlags value)
-    {
-        flags = static_cast<AppFlags>(static_cast<u32>(flags) | static_cast<u32>(value));
-    }
-    void app_remove_flags(AppFlags& flags, AppFlags value)
-    {
-        flags = static_cast<AppFlags>(static_cast<u32>(flags) & (~static_cast<u32>(value)));
-    }
-    void app_toggle_flags(AppFlags& flags, AppFlags value)
-    {
-        flags = static_cast<AppFlags>(static_cast<u32>(flags) ^ static_cast<u32>(value));
-    }
-    
-    struct AppState
-    {
-        AppFlags flags;
-        Renderer renderer;
-        MenuState menu_state;
-        GameState game_state;
-        Window window;
     };
     
     woc_internal Vector2 player_pos(PlayerState& player_state)
@@ -187,23 +152,7 @@ namespace woc {
         return result;
     }
 
-    void game_input(GameInputState& input) {
-        auto move_left = IsKeyDown(KEY_A);
-        auto move_right = IsKeyDown(KEY_D);
-        input.move_dir = static_cast<i32>(move_right) - static_cast<i32>(move_left);
-        
-        auto wind_up = IsKeyDown(KEY_UP);
-        auto wind_down = IsKeyDown(KEY_DOWN);
-        auto wind_left = IsKeyDown(KEY_LEFT);
-        auto wind_right = IsKeyDown(KEY_RIGHT);
-        input.wind_dir_x = static_cast<i32>(wind_right) - static_cast<i32>(wind_left);
-        input.wind_dir_y = static_cast<i32>(wind_up) - static_cast<i32>(wind_down);
-        
-        input.start_ricochet_ability = IsKeyPressed(KEY_SPACE);
-        input.stop_ricochet_ability = IsKeyReleased(KEY_SPACE);
-    }
-
-    void game_update(GameState& game_state, f32 delta_seconds) {
+    void game_update(GameState& game_state, InputState& input, f32 delta_seconds) {
         constexpr f32 PLAYER_MIN_VEL = -250.0f;
         constexpr f32 PLAYER_MAX_VEL = 250.0f;
         constexpr f32 PLAYER_ACCELERATION = 500.0f;
@@ -218,7 +167,7 @@ namespace woc {
         }
         delta_seconds *= game_state.time_scale;
 
-        game_state.player.accel = (f32)game_state.input.move_dir * PLAYER_ACCELERATION;
+        game_state.player.accel = static_cast<f32>(input.move_dir) * PLAYER_ACCELERATION;
         // TODO: Friction should let you go in the opposite direction.
         if (game_state.player.vel < 0.0f) {
             game_state.player.accel += GROUND_FRICTION;
@@ -232,8 +181,8 @@ namespace woc {
         game_state.player.pos_x = Clamp(game_state.player.pos_x, WORLD_MIN.x, WORLD_MAX.x);
 
         auto& ricochet = game_state.player.ricochet_state;
-        ricochet.is_active |= game_state.input.start_ricochet_ability;
-        if (game_state.input.stop_ricochet_ability || ricochet.channel_alpha >= 1.0f)
+        ricochet.is_active |= input.start_ricochet_ability > 0;
+        if (input.stop_ricochet_ability || ricochet.channel_alpha >= 1.0f)
         {
             ricochet.is_active = false;
             std::erase_if(game_state.enemy_projectiles, [player_pos = player_pos(game_state.player), player_size = game_state.player.size, &ricochet, &pp = game_state.player_projectiles] (Projectile& p)
@@ -339,7 +288,7 @@ namespace woc {
         });
 
         auto& ricochet = game_state.player.ricochet_state;
-        if (ricochet.is_active | game_state.input.start_ricochet_ability)
+        if (ricochet.is_active)
         {
             auto ricochet_size = Lerp(game_state.player.size + ricochet.size * 0.25f, game_state.player.size + ricochet.size, ricochet.channel_alpha);
             DrawCircle(static_cast<i32>(player.pos_x), static_cast<i32>(PLAYER_WORLD_Y), ricochet_size, PINK);
@@ -351,7 +300,7 @@ namespace woc {
         {
             for (u16 c = 0; c < ENEMIES_MAX_COLUMNS; c++)
             {
-                if (auto enemy = game_state.enemies[r][c])
+                if (game_state.enemies[r][c])
                 {
                     auto pos = enemy_pos_from_row_column(r, c);
                     auto px = static_cast<i32>(pos.x);
@@ -392,21 +341,21 @@ namespace woc {
         return result;
     }
     
-    void renderer_update_and_render_menu(Renderer& renderer, MenuState& menu_state, Vector2 framebuffer_size, AppFlags& flags)
+    void renderer_update_and_render_menu(Renderer& renderer, MenuState& menu_state, std::optional<GameState>& game_state, Vector2 framebuffer_size)
     {
         auto button_spacing = 10.f;
         auto button_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.5f}, Vector2 { 200.f, 50.f }, Vector2{0.5f, 0.0f});
         if (GuiButton(button_rect, "NEW GAME"))
         {
-            app_add_flags(flags, AppFlags::NewGame);
-            app_add_flags(flags, AppFlags::IsInGame);
+            menu_state.current_page = MenuPageType::Game;
+            game_state = game_init();
         }
         button_rect.y += button_rect.height + button_spacing;
-        if (app_has_any_flags(flags, AppFlags::HasRunningGame))
+        if (game_state)
         {
             if (GuiButton(button_rect, "CONTINUE"))
             {
-                app_add_flags(flags, AppFlags::IsInGame);
+                menu_state.current_page = MenuPageType::Game;
             }
             button_rect.y += button_rect.height + button_spacing;
         }
@@ -438,91 +387,135 @@ namespace woc {
 int main()
 {
     // Doesn't need smart pointers as when it goes out of scope, the app exits and OS cleans it up
-    auto app = woc::AppState {
-        .menu_state = woc::MenuState {
-            .current_page = woc::MenuPageType::MainMenu,
-        },
-        .window = woc::window_init(),
+    auto menu_state = woc::MenuState {
+        .current_page = woc::MenuPageType::MainMenu,
+        .last_menu_page = woc::MenuPageType::MainMenu,
     };
+    auto window = woc::window_init();
+    auto renderer = woc::Renderer{};
+    auto game_state = std::optional<woc::GameState>{};
 
     // TODO: Edit raylib config and disable rmodels
 
-    bool keep_running_app = woc::window_is_running(app.window);
+    bool keep_running_app = true;
+    bool is_window_visible = true;
+    Vector2 window_size = woc::window_size(window);
+    woc::InputState app_input_state{};
+    auto update_app = [&window = window, &keep_running_app, &is_window_visible, &window_size, &app_input_state] ()
+    {
+        PollInputEvents();
+        
+        app_input_state.game_menu_swap += IsKeyPressed(KEY_ESCAPE);
+        app_input_state.new_game += IsKeyPressed(KEY_Y);
+        
+        auto move_left = IsKeyDown(KEY_A);
+        auto move_right = IsKeyDown(KEY_D);
+        app_input_state.move_dir = static_cast<woc::i32>(move_right) - static_cast<woc::i32>(move_left);
+        
+        auto wind_up = IsKeyDown(KEY_UP);
+        auto wind_down = IsKeyDown(KEY_DOWN);
+        auto wind_left = IsKeyDown(KEY_LEFT);
+        auto wind_right = IsKeyDown(KEY_RIGHT);
+        app_input_state.wind_dir_x = static_cast<woc::i32>(wind_right) - static_cast<woc::i32>(wind_left);
+        app_input_state.wind_dir_y = static_cast<woc::i32>(wind_up) - static_cast<woc::i32>(wind_down);
+        
+        app_input_state.start_ricochet_ability += IsKeyPressed(KEY_SPACE);
+        app_input_state.stop_ricochet_ability += IsKeyReleased(KEY_SPACE);
+
+        is_window_visible = woc::window_is_visible(window);
+        window_size = woc::window_size(window);
+
+        if (!woc::window_is_running(window))
+        {
+            keep_running_app = false;
+        }
+    };
+
+    auto update_game = [&menu_state, &keep_running_app, &game_state, visible = &is_window_visible, window_size = &window_size, &renderer] (woc::InputState input)
+    {
+        if (input.new_game)
+        {
+            game_state = woc::game_init();
+        }
+        
+        if (input.game_menu_swap % 2 == 1)
+        {
+            if (menu_state.current_page == woc::MenuPageType::Game)
+            {
+                menu_state.current_page = menu_state.last_menu_page;
+            } else
+            {
+                menu_state.last_menu_page = menu_state.current_page;
+                menu_state.current_page = woc::MenuPageType::Game;
+            }
+        }
+        
+        auto delta_seconds = GetFrameTime();
+        switch (menu_state.current_page)
+        {
+            case woc::MenuPageType::MainMenu:
+            {
+                if (*visible)
+                {
+                    woc::renderer_prepare_rendering(renderer);
+                    woc::renderer_update_and_render_menu(renderer, menu_state, game_state, *window_size);
+                    woc::renderer_finalize_rendering(renderer);
+                }
+                break;
+            }
+            case woc::MenuPageType::Game:
+            {
+                if (game_state->player.health > 0.f)
+                {
+                    woc::game_update(*game_state, input, delta_seconds);
+                }
+                if (*visible)
+                {
+                    woc::renderer_prepare_rendering(renderer);
+                    woc::renderer_render_world(renderer, *game_state, *window_size);
+                    woc::renderer_finalize_rendering(renderer);
+                }
+                break;
+            }
+            case woc::MenuPageType::Settings:
+            {
+                if (*visible)
+                {
+                    woc::renderer_prepare_rendering(renderer);
+                    woc::renderer_update_and_render_settings(renderer, menu_state, *window_size);
+                    woc::renderer_finalize_rendering(renderer);
+                }
+                break;
+            }
+            case woc::MenuPageType::Quit:
+            {
+                keep_running_app = false;
+                break;
+            }
+        }
+    };
+
+    woc::InputState game_input_state{};
     while (keep_running_app)
     {
-        auto delta_seconds = woc::window_delta_seconds(app.window);
-        PollInputEvents();
-        if (IsKeyPressed(KEY_ESCAPE))
-        {
-            woc::app_toggle_flags(app.flags, woc::app_flags_if(woc::AppFlags::IsInGame, woc::app_has_any_flags(app.flags, woc::AppFlags::HasRunningGame)));
-        }
-        if (IsKeyPressed(KEY_Y))
-        {
-            woc::app_add_flags(app.flags, woc::AppFlags::NewGame);
-            woc::app_add_flags(app.flags, woc::AppFlags::IsInGame);
-        }
-
+        update_app();
         
-        if (woc::app_has_any_flags(app.flags, woc::AppFlags::NewGame))
-        {
-            app.game_state = woc::game_init();
-            woc::app_add_flags(app.flags, woc::AppFlags::HasRunningGame);
-            woc::app_remove_flags(app.flags, woc::AppFlags::NewGame);
-        }
-        
-        if (woc::app_has_any_flags(app.flags, woc::AppFlags::IsInGame))
-        {
-            if (app.game_state.player.health > 0.f)
-            {
-                woc::game_input(app.game_state.input);
-                woc::game_update(app.game_state, delta_seconds);
-            }
-            if (woc::window_is_visible(app.window))
-            {
-                auto window_size = woc::window_size(app.window);
-                woc::renderer_prepare_rendering(app.renderer);
-                woc::renderer_render_world(app.renderer, app.game_state, window_size);
-                woc::renderer_finalize_rendering(app.renderer);
-            }
-        } else
-        {
-            switch (app.menu_state.current_page)
-            {
-                case woc::MenuPageType::MainMenu:
-                {
-                    if (woc::window_is_visible(app.window))
-                    {
-                        auto window_size = woc::window_size(app.window);
-                        woc::renderer_prepare_rendering(app.renderer);
-                        woc::renderer_update_and_render_menu(app.renderer, app.menu_state, window_size, app.flags);
-                        woc::renderer_finalize_rendering(app.renderer);
-                    }
-                    break;
-                }
-                case woc::MenuPageType::Settings:
-                {
-                    if (woc::window_is_visible(app.window))
-                    {
-                        auto window_size = woc::window_size(app.window);
-                        woc::renderer_prepare_rendering(app.renderer);
-                        woc::renderer_update_and_render_settings(app.renderer, app.menu_state, window_size);
-                        woc::renderer_finalize_rendering(app.renderer);
-                    }
-                    break;
-                }
-                case woc::MenuPageType::Quit:
-                {
-                    keep_running_app = false;
-                    break;
-                }
-            }
-        }
+        // Create delta from current app thread's state
+        auto temp = app_input_state;
+        auto input = temp;
+        input.game_menu_swap -= game_input_state.game_menu_swap;
+        input.new_game -= game_input_state.new_game;
+        input.start_ricochet_ability -= game_input_state.start_ricochet_ability;
+        input.stop_ricochet_ability -= game_input_state.stop_ricochet_ability;
+        game_input_state = temp;
 
-        keep_running_app &= woc::window_is_running(app.window);
+        std::cout << input.move_dir << std::endl;
+        
+        update_game(input);
     }
 
     // Unnecessary before a program exit. OS cleans up. 
-    woc::window_deinit(app.window);
+    woc::window_deinit(window);
 
     return 0;
 }
