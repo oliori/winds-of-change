@@ -7,99 +7,6 @@
 // - Input lag. Move to another thread?
 
 namespace woc {
-    constexpr Vector2 WORLD_MIN = Vector2{ -400, -500 };
-    constexpr Vector2 WORLD_MAX = Vector2{ 400, 500 };
-    constexpr f32 PLAYER_WORLD_Y = 400.f;
-    constexpr f32 PLAYER_DEFAULT_SIZE = 25.f;
-    constexpr f32 ENEMY_DEFAULT_SIZE = 25.f;
-    constexpr f32 ENEMIES_WORLD_Y = -400.f;
-    constexpr u16 ENEMIES_MAX_ROWS = 3;
-    constexpr u16 ENEMIES_MAX_COLUMNS = 10;
-
-    struct Camera {
-        Vector2 pos;
-        f32 height;
-        Radian rot;
-        f32 zoom;
-    };
-    
-    struct RicochetState
-    {
-        bool is_active;
-        f32 channel_alpha;
-        f32 size;
-    };
-    struct ChangeWindState
-    {
-        f32 channel_time;
-        f32 size;
-    };
-
-    struct PlayerState {
-        f32 health;
-        f32 pos_x;
-        f32 vel;
-        f32 accel;
-        f32 size;
-
-        RicochetState ricochet_state;
-        ChangeWindState change_wind_state;
-    };
-    
-    struct EnemyState {
-        f32 health;
-        f32 shoot_cd;
-    };
-
-    struct InputState {
-        i32 move_dir;
-        i32 wind_dir_x;
-        i32 wind_dir_y;
-        
-        u32 start_ricochet_ability;
-        u32 stop_ricochet_ability;
-        u32 new_game;
-        u32 game_menu_swap;
-    };
-
-    struct Projectile
-    {
-        f32 damage;
-        f32 size;
-        Vector2 pos;
-        Vector2 dir;
-    };
-
-    enum class MenuPageType
-    {
-        MainMenu,
-        Game,
-        Settings,
-        Quit
-    };
-    struct MenuState
-    {
-        MenuPageType current_page;
-        MenuPageType last_menu_page;
-    };
-
-    struct GameState {
-        f32 time_scale = 1.0f;
-        PlayerState player;
-        Camera cam;
-        std::optional<EnemyState> enemies[ENEMIES_MAX_ROWS][ENEMIES_MAX_COLUMNS];
-        std::vector<Projectile> player_projectiles;
-        std::vector<Projectile> enemy_projectiles;
-    };
-
-    struct GameFrameTempData
-    {
-        std::vector<u32> hit_indices;
-    };
-    
-    struct Renderer {
-    };
-    
     woc_internal Vector2 player_pos(PlayerState& player_state)
     {
         return Vector2 { player_state.pos_x, PLAYER_WORLD_Y };
@@ -119,10 +26,18 @@ namespace woc {
         };
         return result;
     }
+    
+    void game_load_level(GameState& game_state)
+    {
+        auto& l = LEVELS.at(game_state.current_level);
+        game_state.enemies = l.enemies;
+    }
 
     GameState game_init()
     {
         auto result = woc::GameState{
+            .current_level = 0,
+            .time_scale = 1.0,
             .player = woc::PlayerState {
                 .health = 100.f,
                 .pos_x = 0.f,
@@ -136,22 +51,15 @@ namespace woc {
                 .height = woc::WORLD_MAX.y - woc::WORLD_MIN.y,
                 .rot = woc::Radian { 0.0 },
                 .zoom = 1.0f,
-            }
+            },
+            .player_projectiles = {},
+            .enemy_projectiles{},
         };
+        game_load_level(result);
         
-        for (auto i = 0; i < woc::ENEMIES_MAX_ROWS; i++)
-        {
-            for (auto j = 0; j < woc::ENEMIES_MAX_COLUMNS; j++)
-            {
-                result.enemies[i][j] = woc::EnemyState {
-                    .health = 10.f
-                };
-            }
-        }
-
         return result;
     }
-
+    
     void game_update(GameState& game_state, InputState& input, f32 delta_seconds) {
         constexpr f32 PLAYER_MIN_VEL = -250.0f;
         constexpr f32 PLAYER_MAX_VEL = 250.0f;
@@ -267,6 +175,28 @@ namespace woc {
                         });
                     }
                 }
+            }
+        }
+
+        bool all_enemies_dead = true;
+        for (auto& enemy_row : game_state.enemies)
+        {
+            for (auto& enemy : enemy_row)
+            {
+                all_enemies_dead &= !enemy;
+            }
+        }
+        if (all_enemies_dead)
+        {
+            std::cout << "LEVEL COMPLETE" << std::endl;
+            game_state.current_level++;
+            if (game_state.current_level >= LEVELS.size())
+            {
+                // TODO: Win screen
+                assert(false);
+            } else
+            {
+                game_load_level(game_state);
             }
         }
     }
@@ -508,8 +438,6 @@ int main()
         input.start_ricochet_ability -= game_input_state.start_ricochet_ability;
         input.stop_ricochet_ability -= game_input_state.stop_ricochet_ability;
         game_input_state = temp;
-
-        std::cout << input.move_dir << std::endl;
         
         update_game(input);
     }
