@@ -1,7 +1,5 @@
 ﻿#include "windsofchange.h"
 
-#include <algorithm>
-
 namespace woc
 {
     woc_internal Vector2 player_pos(PlayerState& player_state)
@@ -402,23 +400,43 @@ namespace woc
             DrawCircle(wind_available_pos_x, wind_available_pos_y, static_cast<f32>(wind_available_size), YELLOW);
             wind_available_pos_y -= wind_available_spacing + wind_available_size;
         }
+    }
 
-        if (game_state.level_status == LevelStatus::Won)
+    void renderer_render_level_complete(Renderer& renderer, GameState& game_state, Vector2 framebuffer_size)
+    {
+        i32 fbx = static_cast<i32>(framebuffer_size.x);
+        i32 fby = static_cast<i32>(framebuffer_size.y);
+        DrawRectangle(0, 0, fbx, fby, Color{0, 0, 0, static_cast<u8>(Lerp(225.f, 0.f, game_state.time_scale * game_state.time_scale))});
+        auto buttons_rect = ui_rectangle_from_anchor(framebuffer_size, { 0.5, 0.5 }, { 200.f, 50.f});
+        if (GuiButton(buttons_rect, "NEXT LEVEL"))
         {
-            DrawRectangle(0, 0, fbx, fby, Color{0, 0, 0, static_cast<u8>(Lerp(225.f, 0.f, game_state.time_scale * game_state.time_scale))});
-            auto buttons_rect = ui_rectangle_from_anchor(framebuffer_size, { 0.5, 0.5 }, { 200.f, 50.f});
-            if (GuiButton(buttons_rect, "NEXT LEVEL"))
-            {
-                game_state = game_init(game_state.current_level+1);
-            }
-        } else if (game_state.level_status == LevelStatus::Lost)
+            game_state = game_init(game_state.current_level+1);
+        }
+    }
+    
+    void renderer_render_level_fail(Renderer& renderer, GameState& game_state, Vector2 framebuffer_size)
+    {
+        i32 fbx = static_cast<i32>(framebuffer_size.x);
+        i32 fby = static_cast<i32>(framebuffer_size.y);
+        DrawRectangle(0, 0, fbx, fby, Color{0, 0, 0, static_cast<u8>(Lerp(225.f, 0.f, game_state.time_scale * game_state.time_scale))});
+        auto buttons_rect = ui_rectangle_from_anchor(framebuffer_size, { 0.5, 0.5 }, { 200.f, 50.f});
+        if (GuiButton(buttons_rect, "TRY AGAIN"))
         {
-            DrawRectangle(0, 0, fbx, fby, Color{0, 0, 0, static_cast<u8>(Lerp(225.f, 0.f, game_state.time_scale * game_state.time_scale))});
-            auto buttons_rect = ui_rectangle_from_anchor(framebuffer_size, { 0.5, 0.5 }, { 200.f, 50.f});
-            if (GuiButton(buttons_rect, "TRY AGAIN"))
-            {
-                game_state = game_init(game_state.current_level);
-            }
+            game_state = game_init(game_state.current_level);
+        }
+    }
+    
+    void renderer_render_game_won(Renderer& renderer, MenuState& menu_state, std::optional<GameState>& game_state, Vector2 framebuffer_size)
+    {
+        i32 fbx = static_cast<i32>(framebuffer_size.x);
+        i32 fby = static_cast<i32>(framebuffer_size.y);
+        DrawRectangle(0, 0, fbx, fby, Color{0, 0, 0, static_cast<u8>(Lerp(225.f, 0.f, game_state->time_scale * game_state->time_scale))});
+        auto buttons_rect = ui_rectangle_from_anchor(framebuffer_size, { 0.5, 0.5 }, { 200.f, 50.f});
+        if (GuiButton(buttons_rect, "MAIN MENU"))
+        {
+            menu_state.current_page = MenuPageType::MainMenu;
+            menu_state.last_menu_page = MenuPageType::MainMenu;
+            game_state = std::nullopt;
         }
     }
 

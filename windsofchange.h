@@ -5,6 +5,7 @@
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <iostream>
 #include <optional>
@@ -31,6 +32,7 @@ namespace woc
     
     constexpr f32 WIND_DURATION = 0.75f;
     constexpr u32 START_LEVEL = 1;
+    constexpr u32 END_LEVEL = 1;
     constexpr Vector2 WORLD_MIN = Vector2{ -700, -500 };
     constexpr Vector2 WORLD_MAX = Vector2{ 700, 500 };
     constexpr f32 PLAYER_WORLD_Y = 400.f;
@@ -138,6 +140,9 @@ namespace woc
     void renderer_update_and_render_menu(Renderer& renderer, MenuState& menu_state, std::optional<GameState>& game_state, Vector2 framebuffer_size);
     void renderer_update_and_render_settings(Renderer& renderer, MenuState& menu_state, Vector2 framebuffer_size);
     void renderer_render_world(Renderer& renderer, GameState& game_state, Vector2 framebuffer_size);
+    void renderer_render_level_fail(Renderer& renderer, GameState& game_state, Vector2 framebuffer_size);
+    void renderer_render_level_complete(Renderer& renderer, GameState& game_state, Vector2 framebuffer_size);
+    void renderer_render_game_won(Renderer& renderer, MenuState& menu_state, GameState& game_state, Vector2 framebuffer_size);
     void renderer_finalize_rendering(Renderer& renderer);
     void renderer_prepare_rendering(Renderer& renderer);
 

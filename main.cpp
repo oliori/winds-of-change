@@ -85,10 +85,24 @@ int main()
             case woc::MenuPageType::Game:
             {
                 woc::game_update(*game_state, input, delta_seconds);
+                    
                 if (*visible)
                 {
                     woc::renderer_prepare_rendering(renderer);
                     woc::renderer_render_world(renderer, *game_state, *window_size);
+                    if (game_state->level_status == woc::LevelStatus::Won)
+                    {
+                        if (game_state->current_level == woc::END_LEVEL)
+                        {
+                            woc::renderer_render_game_won(renderer, menu_state, game_state, *window_size);
+                        } else
+                        {
+                            woc::renderer_render_level_complete(renderer, *game_state, *window_size);
+                        }
+                    } else if (game_state->level_status == woc::LevelStatus::Lost)
+                    {
+                        woc::renderer_render_level_fail(renderer, *game_state, *window_size);
+                    }
                     woc::renderer_finalize_rendering(renderer);
                 }
                 break;
