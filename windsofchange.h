@@ -62,7 +62,8 @@ namespace woc
     struct EnemyState {
         Vector2 pos;
         Vector2 size;
-        u32 health;
+        i32 health;
+        bool contributes_to_win;
     };
 
     struct InputState {
@@ -97,6 +98,7 @@ namespace woc
     struct GameState {
         u32 current_level = 0; 
         f32 time_scale = 1.0f;
+        bool level_complete;
         PlayerState player;
         Camera cam;
         std::vector<EnemyState> enemies;

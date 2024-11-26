@@ -1,5 +1,7 @@
 ﻿#include "windsofchange.h"
 
+#include <algorithm>
+
 namespace woc
 {
     woc_internal Vector2 player_pos(PlayerState& player_state)
@@ -41,11 +43,13 @@ namespace woc
                     .pos = Vector2 { -0.f, -300.f },
                     .size = Vector2 { 100.f, 25.f },
                     .health = 1,
+                    .contributes_to_win = true
                 });
                 enemies.emplace_back(EnemyState {
                     .pos = Vector2 { -0.f, -100.f },
                     .size = Vector2 { 100.f, 25.f },
                     .health = 1,
+                    .contributes_to_win = true
                 });
                 break;
             }
@@ -157,6 +161,10 @@ namespace woc
         constexpr f32 PLAYER_ACCELERATION = 1500.0f;
         constexpr f32 GROUND_FRICTION = 750.0f;
 
+        if (game_state.level_complete)
+        {
+            game_state.time_scale = std::max(game_state.time_scale - delta_seconds, 0.f);
+        }
         delta_seconds *= game_state.time_scale;
 
         game_state.player.accel = static_cast<f32>(input.move_dir) * PLAYER_ACCELERATION;
@@ -182,6 +190,7 @@ namespace woc
                 if (!Vector2Equals(collision_normal, Vector2Zero()))
                 {
                     p.dir = Vector2Reflect(p.dir, collision_normal);
+                    e.health--;
                     break;
                 }
             }
@@ -194,6 +203,11 @@ namespace woc
             }
         }
 
+        std::erase_if(game_state.enemies, [] (EnemyState& e)
+        {
+            return e.health <= 0;
+        });
+
         if (input.send_ball & game_state.player.balls_available)
         {
             game_state.player_projectiles.emplace_back(Projectile {
@@ -203,6 +217,7 @@ namespace woc
             game_state.player.balls_available--;
         }
         
+        game_state.level_complete = !std::ranges::any_of(game_state.enemies, [] (EnemyState& e) { return e.contributes_to_win; });
     }
 
     void renderer_update_and_render_menu(Renderer& renderer, MenuState& menu_state, std::optional<GameState>& game_state, Vector2 framebuffer_size) {
@@ -271,17 +286,25 @@ namespace woc
         
         if (game_state.player.balls_available)
         {
-            DrawCircle(px, py - BALL_DEFAULT_Y_OFFSET, BALL_DEFAULT_RADIUS, Color { 127, 0, 0, 127 });
+            DrawCircleLines(px, py - BALL_DEFAULT_Y_OFFSET, BALL_DEFAULT_RADIUS, PINK);
         }
         
         for (auto& projectile : game_state.player_projectiles)
         {
-            auto px = static_cast<i32>(projectile.pos.x);
-            auto py = static_cast<i32>(projectile.pos.y);
-            DrawCircle(px, py, BALL_DEFAULT_RADIUS, PINK);
+            DrawCircle(static_cast<i32>(projectile.pos.x), static_cast<i32>(projectile.pos.y), BALL_DEFAULT_RADIUS, PINK);
         }
 
         EndMode2D();
+
+        i32 balls_available_spacing = 20;
+        i32 balls_available_size = 30;
+        i32 balls_available_pos_x = framebuffer_size.x - balls_available_spacing - balls_available_size;
+        i32 balls_available_pos_y = framebuffer_size.y - balls_available_spacing - balls_available_size;
+        for (u32 i = 0; i < game_state.player.balls_available; i++)
+        {
+            DrawCircle(balls_available_pos_x, balls_available_pos_y, balls_available_size, PINK);
+            balls_available_pos_x -= balls_available_spacing + balls_available_size;
+        }
     }
 
     void renderer_finalize_rendering(Renderer& renderer)
