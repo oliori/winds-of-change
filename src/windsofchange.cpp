@@ -420,29 +420,47 @@ namespace woc
             .zoom = (framebuffer_size.y / cam.height) * cam.zoom
         });
 
-        auto diff = Vector2Subtract(WORLD_MAX, WORLD_MIN);
-        DrawRectangle(static_cast<i32>(WORLD_MIN.x), static_cast<i32>(WORLD_MIN.y), static_cast<i32>(diff.x), static_cast<i32>(diff.y), LIGHTGRAY);
+        //auto diff = Vector2Subtract(WORLD_MAX, WORLD_MIN);
+        //DrawRectangle(static_cast<i32>(WORLD_MIN.x), static_cast<i32>(WORLD_MIN.y), static_cast<i32>(diff.x), static_cast<i32>(diff.y), LIGHTGRAY);
 
-        auto px = static_cast<i32>(player.pos_x);
-        auto py = static_cast<i32>(PLAYER_WORLD_Y);
-        DrawRectangle(px - PLAYER_DEFAULT_WIDTH / 2, py - PLAYER_DEFAULT_HEIGHT / 2, PLAYER_DEFAULT_WIDTH, PLAYER_DEFAULT_HEIGHT, RED);
+        auto player_half_size = Vector2Scale(player_size(), 0.5f);
+        auto player_rect = Rectangle { player.pos_x - player_half_size.x, PLAYER_WORLD_Y - player_half_size.y, PLAYER_DEFAULT_WIDTH, PLAYER_DEFAULT_HEIGHT };
+        DrawRectanglePro(player_rect, Vector2Zero(), 0.f, PLAYER_COLOR);
+        DrawRectangleLinesEx(player_rect, 1.0f, BLACK);
         
         for (auto& e : game_state.enemies)
         {
-            auto ex = static_cast<i32>(e.pos.x);
-            auto ey = static_cast<i32>(e.pos.y);
             auto half_size = Vector2Scale(e.size, 0.5f);
-            DrawRectangle(ex - static_cast<i32>(half_size.x), ey - static_cast<i32>(half_size.y), static_cast<i32>(e.size.x), static_cast<i32>(e.size.y), RED);
+            auto e_rect = Rectangle {e.pos.x - half_size.x, e.pos.y - half_size.y, e.size.x, e.size.y };
+            switch (e.type)
+            {
+                case EnemyType::Indestructible: {
+                    DrawRectanglePro(e_rect, Vector2Zero(), 0.f, INDESTRUCTIBLE_WALL_COLOR);
+                    DrawRectangleLinesEx(e_rect, 1.0f, BLACK);
+                    break;
+                }
+                case EnemyType::Normal: {
+                    DrawRectanglePro(e_rect, Vector2Zero(), 0.f, WALL_COLOR);
+                    auto health_rect = e_rect;
+                    for (auto i = 0; i < e.health; i++)
+                    {
+                        DrawRectangleLinesEx(health_rect, 1.0f, WHITE);
+                        health_rect.height += 2;
+                        health_rect.width += 2;
+                    }
+                    break;
+                }
+            }
         }
         
         if (game_state.player.balls_available)
         {
-            DrawCircleLines(px, py - BALL_DEFAULT_Y_OFFSET, BALL_DEFAULT_RADIUS, PINK);
+            DrawCircleLinesV(Vector2Add(player_pos(player), Vector2 { 0.f, -BALL_DEFAULT_Y_OFFSET}), BALL_DEFAULT_RADIUS, BALL_COLOR);
         }
         
         for (auto& projectile : game_state.player_projectiles)
         {
-            DrawCircle(static_cast<i32>(projectile.pos.x), static_cast<i32>(projectile.pos.y), BALL_DEFAULT_RADIUS, PINK);
+            DrawCircleV(projectile.pos, BALL_DEFAULT_RADIUS, BALL_COLOR);
         }
 
         EndMode2D();
@@ -456,7 +474,7 @@ namespace woc
         i32 balls_available_pos_y = fby - balls_available_spacing - balls_available_size;
         for (u32 i = 0; i < game_state.player.balls_available; i++)
         {
-            DrawCircle(balls_available_pos_x, balls_available_pos_y, static_cast<f32>(balls_available_size), PINK);
+            DrawCircle(balls_available_pos_x, balls_available_pos_y, static_cast<f32>(balls_available_size), BALL_COLOR);
             balls_available_pos_y -= balls_available_spacing + balls_available_size;
         }
         
@@ -516,7 +534,7 @@ namespace woc
     void renderer_prepare_rendering(Renderer& renderer)
     {
         BeginDrawing();
-        ClearBackground(RAYWHITE);
+        ClearBackground(BACKGROUND_COLOR);
     }
 
     MenuState menu_init(MenuPageType page)

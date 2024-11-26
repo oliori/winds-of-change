@@ -43,8 +43,14 @@ namespace woc
     constexpr i32 PLAYER_DEFAULT_WIDTH = 100;
     constexpr i32 PLAYER_DEFAULT_HEIGHT = 25;
     constexpr f32 BALL_DEFAULT_VELOCITY = 200.f;
-    constexpr i32 BALL_DEFAULT_RADIUS = 10;
-    constexpr i32 BALL_DEFAULT_Y_OFFSET = 25;
+    constexpr f32 BALL_DEFAULT_RADIUS = 10.f;
+    constexpr f32 BALL_DEFAULT_Y_OFFSET = 25.f;
+
+    constexpr Color BACKGROUND_COLOR = Color { 0xE3, 0xCB, 0xAF, 0xFF };
+    constexpr Color BALL_COLOR = Color { 0x52, 0x82, 0x7D, 0xFF };
+    constexpr Color PLAYER_COLOR = Color { 0x75, 0x9B, 0x97, 0xFF };
+    constexpr Color INDESTRUCTIBLE_WALL_COLOR = Color { 0x9E, 0x76, 0x76, 0xFF };
+    constexpr Color WALL_COLOR = Color { 0x4F, 0x4D, 0x70, 0xFF };
     
     struct Radian {
         f32 val;
