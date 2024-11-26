@@ -64,11 +64,11 @@ int main()
             if (menu_state.current_page == woc::MenuPageType::Game)
             {
                 menu_state.current_page = woc::MenuPageType::MainMenu;
-                woc::audio_play_sound(audio_state, woc::AudioType::UIPageChange);
+                woc::audio_play_sound_randomize_pitch(audio_state, woc::AudioType::UIPageChange);
             } else
             {
                 menu_state.current_page = woc::MenuPageType::Game;
-                woc::audio_play_sound(audio_state, woc::AudioType::UIPageChange);
+                woc::audio_play_sound_randomize_pitch(audio_state, woc::AudioType::UIPageChange);
             }
         }
         
@@ -87,7 +87,7 @@ int main()
             }
             case woc::MenuPageType::Game:
             {
-                woc::game_update(*game_state, input, delta_seconds);
+                woc::game_update(*game_state, input, audio_state, delta_seconds);
                     
                 if (*visible)
                 {

@@ -35,7 +35,7 @@ namespace woc
     using f64 = double;
     
     constexpr f32 WIND_DURATION = 0.75f;
-    constexpr u32 START_LEVEL = 1;
+    constexpr u32 START_LEVEL = 0;
     constexpr u32 END_LEVEL = 1;
     constexpr Vector2 WORLD_MIN = Vector2{ -700, -500 };
     constexpr Vector2 WORLD_MAX = Vector2{ 700, 500 };
@@ -45,6 +45,8 @@ namespace woc
     constexpr f32 BALL_DEFAULT_VELOCITY = 200.f;
     constexpr f32 BALL_DEFAULT_RADIUS = 10.f;
     constexpr f32 BALL_DEFAULT_Y_OFFSET = 25.f;
+    
+    constexpr f32 ENEMY_DEAD_EFFECT_DURATION = 0.5f;
 
     constexpr Color BACKGROUND_COLOR = Color { 0xE3, 0xCB, 0xAF, 0xFF };
     constexpr Color BALL_COLOR = Color { 0x52, 0x82, 0x7D, 0xFF };
@@ -58,6 +60,27 @@ namespace woc
     struct Degree {
         f32 val;
     };
+
+    f32 ease_in_back(f32 alpha);
+    
+    enum class AudioType : u32
+    {
+        MusicBackground = 0,
+        SFXIndestructibleImpact,
+        SFXWallImpact,
+        UIButtonHover,
+        UIButtonClick,
+        UIPageChange,
+        MAX_AUDIO_TYPE
+    };
+    struct AudioState
+    {
+        std::array<Sound, static_cast<size_t>(AudioType::MAX_AUDIO_TYPE)> sounds;
+    };
+    AudioState audio_init();
+    void audio_deinit(AudioState& audio_state);
+    void audio_play_sound(AudioState& audio_state, AudioType sound_type);
+    void audio_play_sound_randomize_pitch(AudioState& audio_state, AudioType sound_type);
     
     struct Camera {
         Vector2 pos;
@@ -96,6 +119,12 @@ namespace woc
         EnemyType type;
         bool contributes_to_win;
     };
+    
+    struct EnemyDeadEffect {
+        Vector2 pos;
+        Vector2 size;
+        f32 timer;
+    };
 
     struct InputState {
         i32 move_dir;
@@ -128,9 +157,11 @@ namespace woc
         Camera cam;
         std::vector<EnemyState> enemies;
         std::vector<Projectile> player_projectiles;
+        
+        std::vector<EnemyDeadEffect> dead_enemy_effects;
     };
     GameState game_init();
-    void game_update(GameState& game_state, InputState& input, f32 delta_seconds);
+    void game_update(GameState& game_state, InputState& input, AudioState& audio_state, f32 delta_seconds);
 
     struct MenuState;
     
@@ -179,22 +210,6 @@ namespace woc
     };
     MenuState menu_init(MenuPageType page);
     
-    enum class AudioType : u32
-    {
-        MusicBackground = 0,
-        UIButtonHover,
-        UIButtonClick,
-        UIPageChange,
-        MAX_AUDIO_TYPE
-    };
-    struct AudioState
-    {
-        std::array<Sound, static_cast<size_t>(AudioType::MAX_AUDIO_TYPE)> sounds;
-    };
-    AudioState audio_init();
-    void audio_deinit(AudioState& audio_state);
-    void audio_play_sound(AudioState& audio_state, AudioType sound_type);
-
     struct Renderer {
     };
     

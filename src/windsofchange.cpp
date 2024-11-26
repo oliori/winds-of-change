@@ -185,7 +185,7 @@ namespace woc
         return Vector2Rotate(result, rectangle_rotation.val);
     }
 
-    void game_update(GameState& game_state, InputState& input, f32 delta_seconds)
+    void game_update(GameState& game_state, InputState& input, AudioState& audio_state, f32 delta_seconds)
     {
         constexpr f32 PLAYER_MIN_VEL = -750.0f;
         constexpr f32 PLAYER_MAX_VEL = 750.0f;
@@ -216,6 +216,9 @@ namespace woc
             return p.pos.x < WORLD_MIN.x | p.pos.x > WORLD_MAX.x | p.pos.y < WORLD_MIN.y | p.pos.y > WORLD_MAX.y;
         });
 
+        // Without proper mixing, limit to 1 impact sound each frame
+        bool collide_indestructible = false;
+        bool collide_wall = false;
         for (auto& p : game_state.player_projectiles)
         {
             p.pos = Vector2Add(p.pos, Vector2Scale(p.dir, game_state.player.ball_velocity * delta_seconds));
@@ -227,6 +230,8 @@ namespace woc
                 {
                     p.dir = Vector2Reflect(p.dir, collision_normal);
                     e.health--;
+                    collide_wall |= e.type != EnemyType::Indestructible;
+                    collide_indestructible |= e.type == EnemyType::Indestructible;
                     break;
                 }
             }
@@ -235,19 +240,43 @@ namespace woc
             if (!Vector2Equals(collision_normal, Vector2Zero()))
             {
                 p.dir = Vector2Reflect(p.dir, collision_normal);
+                collide_indestructible = true;
                 break;
             }
         }
 
-        std::erase_if(game_state.enemies, [] (EnemyState& e)
+        if (collide_indestructible)
         {
-            return e.health <= 0 && e.type != EnemyType::Indestructible;
+            audio_play_sound_randomize_pitch(audio_state, AudioType::SFXIndestructibleImpact);
+        }
+        if (collide_wall)
+        {
+            audio_play_sound_randomize_pitch(audio_state, AudioType::SFXWallImpact);
+        }
+
+        std::erase_if(game_state.dead_enemy_effects, [delta_seconds] (EnemyDeadEffect& dead_effect)
+        {
+            dead_effect.timer -= delta_seconds;
+            return dead_effect.timer <= 0.f;
+        });
+        std::erase_if(game_state.enemies, [&dee = game_state.dead_enemy_effects] (EnemyState& e)
+        {
+            if (e.health <= 0 && e.type != EnemyType::Indestructible)
+            {
+                dee.emplace_back(EnemyDeadEffect {
+                    .pos = e.pos,
+                    .size = e.size,
+                    .timer = ENEMY_DEAD_EFFECT_DURATION
+                });
+                return true;
+            }
+            return false;
         });
 
         if (input.send_ball & game_state.player.balls_available)
         {
             game_state.player_projectiles.emplace_back(Projectile {
-                .pos = Vector2Add(player_pos(game_state.player), Vector2 { 0.f, static_cast<f32>(-BALL_DEFAULT_Y_OFFSET) }),
+                .pos = Vector2Add(player_pos(game_state.player), Vector2 { 0.f, -BALL_DEFAULT_Y_OFFSET }),
                 .dir = Vector2 { 0, -1 }
             });
             game_state.player.balls_available--;
@@ -317,12 +346,12 @@ namespace woc
         out_hover = CheckCollisionPointRec(GetMousePosition(), bounds);
         if (!already_hovered && out_hover)
         {
-            audio_play_sound(audio_state, AudioType::UIButtonHover);
+            audio_play_sound_randomize_pitch(audio_state, AudioType::UIButtonHover);
         }
         
         if (GuiButton(bounds, text.data()))
         {
-            audio_play_sound(audio_state, AudioType::UIButtonClick);
+            audio_play_sound_randomize_pitch(audio_state, AudioType::UIButtonClick);
             return true;
         }
 
@@ -340,8 +369,8 @@ namespace woc
         }
         if (renderer_ui_button(buttons_rect, "CONTINUE", continue_hover, audio_state, continue_hover))
         {
-            audio_play_sound(audio_state, AudioType::UIButtonClick);
-            audio_play_sound(audio_state, AudioType::UIPageChange);
+            audio_play_sound_randomize_pitch(audio_state, AudioType::UIButtonClick);
+            audio_play_sound_randomize_pitch(audio_state, AudioType::UIPageChange);
             menu_state = menu_init(MenuPageType::Game);
         }
         GuiSetState(STATE_NORMAL);
@@ -350,8 +379,8 @@ namespace woc
         auto& new_game_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(MainMenuButtonType::NewGame));
         if (renderer_ui_button(buttons_rect, "NEW GAME", new_game_hover, audio_state, new_game_hover))
         {
-            audio_play_sound(audio_state, AudioType::UIButtonClick);
-            audio_play_sound(audio_state, AudioType::UIPageChange);
+            audio_play_sound_randomize_pitch(audio_state, AudioType::UIButtonClick);
+            audio_play_sound_randomize_pitch(audio_state, AudioType::UIPageChange);
             menu_state = menu_init(MenuPageType::Game);
             game_state = game_init(START_LEVEL);
         }
@@ -360,8 +389,8 @@ namespace woc
         auto& settings_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(MainMenuButtonType::Settings));
         if (renderer_ui_button(buttons_rect, "SETTINGS", settings_hover, audio_state, settings_hover))
         {
-            audio_play_sound(audio_state, AudioType::UIButtonClick);
-            audio_play_sound(audio_state, AudioType::UIPageChange);
+            audio_play_sound_randomize_pitch(audio_state, AudioType::UIButtonClick);
+            audio_play_sound_randomize_pitch(audio_state, AudioType::UIPageChange);
             menu_state = menu_init(MenuPageType::Settings);
         }
         
@@ -369,8 +398,8 @@ namespace woc
         auto& credits_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(MainMenuButtonType::Credits));
         if (renderer_ui_button(buttons_rect, "CREDITS", credits_hover, audio_state, credits_hover))
         {
-            audio_play_sound(audio_state, AudioType::UIButtonClick);
-            audio_play_sound(audio_state, AudioType::UIPageChange);
+            audio_play_sound_randomize_pitch(audio_state, AudioType::UIButtonClick);
+            audio_play_sound_randomize_pitch(audio_state, AudioType::UIPageChange);
             menu_state = menu_init(MenuPageType::Credits);
         }
         
@@ -378,8 +407,8 @@ namespace woc
         auto& quit_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(MainMenuButtonType::Quit));
         if (renderer_ui_button(buttons_rect, "QUIT", quit_hover, audio_state, quit_hover))
         {
-            audio_play_sound(audio_state, AudioType::UIButtonClick);
-            audio_play_sound(audio_state, AudioType::UIPageChange);
+            audio_play_sound_randomize_pitch(audio_state, AudioType::UIButtonClick);
+            audio_play_sound_randomize_pitch(audio_state, AudioType::UIPageChange);
             menu_state = menu_init(MenuPageType::Quit);
         }
     }
@@ -451,6 +480,16 @@ namespace woc
                     break;
                 }
             }
+        }
+        
+        for (auto& e : game_state.dead_enemy_effects)
+        {
+            auto alpha = e.timer / ENEMY_DEAD_EFFECT_DURATION;
+            auto alpha_eased = ease_in_back(alpha);
+            auto size = Vector2Scale(e.size, alpha_eased);
+            auto half_size = Vector2Scale(size, 0.5f);
+            auto e_rect = Rectangle {e.pos.x - half_size.x, e.pos.y - half_size.y, size.x, size.y };
+            DrawRectanglePro(e_rect, Vector2Zero(), 0.f, WALL_COLOR);
         }
         
         if (game_state.player.balls_available)
@@ -546,6 +585,13 @@ namespace woc
         return result;
     }
 
+    f32 ease_in_back(f32 alpha)
+    {
+        constexpr f32 c1 = 1.70158f;
+        constexpr f32 c3 = c1 + 1;
+        return c3 * alpha * alpha * alpha - c1 * alpha * alpha;
+    }
+
     AudioState audio_init()
     {
         InitAudioDevice();
@@ -554,6 +600,10 @@ namespace woc
             .sounds{}
         };
         result.sounds.at(static_cast<size_t>(AudioType::MusicBackground)) = LoadSound("assets/audio/cozy.ogg");
+        
+        result.sounds.at(static_cast<size_t>(AudioType::SFXIndestructibleImpact)) = LoadSound("assets/audio/temp/impactTin_medium_004.ogg");
+        result.sounds.at(static_cast<size_t>(AudioType::SFXWallImpact)) = LoadSound("assets/audio/temp/impactGlass_medium_004.ogg");
+        
         result.sounds.at(static_cast<size_t>(AudioType::UIPageChange)) = LoadSound("assets/audio/temp/card-slide-6.ogg");
         result.sounds.at(static_cast<size_t>(AudioType::UIButtonHover)) = LoadSound("assets/audio/temp/chips-handle-3.ogg");
         result.sounds.at(static_cast<size_t>(AudioType::UIButtonClick)) = LoadSound("assets/audio/temp/die-throw-1.ogg");
@@ -573,6 +623,21 @@ namespace woc
     void audio_play_sound(AudioState& audio_state, AudioType sound_type)
     {
         assert(sound_type < AudioType::MAX_AUDIO_TYPE);
-        PlaySound(audio_state.sounds.at((size_t)sound_type));
+        auto& sound = audio_state.sounds.at(static_cast<size_t>(sound_type));
+        SetSoundPitch(sound, 1.0f);
+        PlaySound(sound);
+    }
+
+    void audio_play_sound_randomize_pitch(AudioState& audio_state, AudioType sound_type)
+    {
+        assert(sound_type < AudioType::MAX_AUDIO_TYPE);
+        i32 rand = GetRandomValue(0, 10000);
+        f32 frand = static_cast<f32>(rand) / (10000.f * 0.5f) - 1.f;
+        constexpr f32 PITCH_VARIATION = 0.10f;
+        f32 pitch = 1 + frand * PITCH_VARIATION;
+        std::cout << pitch << std::endl;
+        auto& sound = audio_state.sounds.at(static_cast<size_t>(sound_type));
+        SetSoundPitch(sound, pitch);
+        PlaySound(sound);
     }
 }
