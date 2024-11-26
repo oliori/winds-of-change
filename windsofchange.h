@@ -12,6 +12,9 @@
 #include <vector>
 #include <array>
 #include <cassert>
+#include <variant>
+
+#include "windsofchange.h"
 
 #define woc_internal static
 #define woc_global static
@@ -103,20 +106,6 @@ namespace woc
         Vector2 dir;
     };
 
-    enum class MenuPageType
-    {
-        MainMenu,
-        Game,
-        Settings,
-        Quit,
-        Credits
-    };
-    struct MenuState
-    {
-        MenuPageType current_page;
-        MenuPageType last_menu_page;
-    };
-
     enum class LevelStatus
     {
         InProgress,
@@ -136,20 +125,59 @@ namespace woc
     GameState game_init();
     void game_update(GameState& game_state, InputState& input, f32 delta_seconds);
 
-    struct Renderer {
+    struct MenuState;
+    
+    enum class MenuPageType
+    {
+        MainMenu,
+        Game,
+        Settings,
+        Quit,
+        Credits
     };
-    void renderer_update_and_render_menu(Renderer& renderer, MenuState& menu_state, std::optional<GameState>& game_state, Vector2 framebuffer_size);
-    void renderer_update_and_render_settings(Renderer& renderer, MenuState& menu_state, Vector2 framebuffer_size);
-    void renderer_render_world(Renderer& renderer, GameState& game_state, Vector2 framebuffer_size);
-    void renderer_render_level_fail(Renderer& renderer, GameState& game_state, Vector2 framebuffer_size);
-    void renderer_render_level_complete(Renderer& renderer, GameState& game_state, Vector2 framebuffer_size);
-    void renderer_render_game_won(Renderer& renderer, MenuState& menu_state, GameState& game_state, Vector2 framebuffer_size);
-    void renderer_finalize_rendering(Renderer& renderer);
-    void renderer_prepare_rendering(Renderer& renderer);
-
+    
+    constexpr u32 MAX_BUTTONS_PER_PAGE = 12;
+    enum class MainMenuButtonType
+    {
+        NewGame,
+        Continue,
+        Settings,
+        Credits,
+        Quit
+    };
+    static_assert(static_cast<u32>(MainMenuButtonType::Quit) < MAX_BUTTONS_PER_PAGE);
+    
+    enum class SettingsButtonType
+    {
+        Back,
+    };
+    static_assert(static_cast<u32>(SettingsButtonType::Back) < MAX_BUTTONS_PER_PAGE);
+    
+    enum class CreditsButtonType
+    {
+        Back,
+    };
+    static_assert(static_cast<u32>(CreditsButtonType::Back) < MAX_BUTTONS_PER_PAGE);
+    
+    enum class GameButtonType
+    {
+        Menu,
+    };
+    static_assert(static_cast<u32>(GameButtonType::Menu) < MAX_BUTTONS_PER_PAGE);
+    
+    struct MenuState
+    {
+        MenuPageType current_page;
+        std::array<bool, MAX_BUTTONS_PER_PAGE> buttons_hover_state;
+    };
+    MenuState menu_init(MenuPageType page);
+    
     enum class AudioType : u32
     {
-        Background = 0,
+        MusicBackground = 0,
+        UIButtonHover,
+        UIButtonClick,
+        UIPageChange,
         MAX_AUDIO_TYPE
     };
     struct AudioState
@@ -159,5 +187,17 @@ namespace woc
     AudioState audio_init();
     void audio_deinit(AudioState& audio_state);
     void audio_play_sound(AudioState& audio_state, AudioType sound_type);
+
+    struct Renderer {
+    };
+    
+    void renderer_finalize_rendering(Renderer& renderer);
+    void renderer_prepare_rendering(Renderer& renderer);
+    void renderer_update_and_render_menu(Renderer& renderer, MenuState& menu_state, std::optional<GameState>& game_state, AudioState& audio_state, Vector2 framebuffer_size);
+    void renderer_update_and_render_settings(Renderer& renderer, MenuState& menu_state, AudioState& audio_state, Vector2 framebuffer_size);
+    void renderer_render_world(Renderer& renderer, GameState& game_state, AudioState& audio_state, Vector2 framebuffer_size);
+    void renderer_render_level_fail(Renderer& renderer, GameState& game_state, AudioState& audio_state, Vector2 framebuffer_size);
+    void renderer_render_level_complete(Renderer& renderer, GameState& game_state, AudioState& audio_state, Vector2 framebuffer_size);
+    void renderer_render_game_won(Renderer& renderer, MenuState& menu_state, GameState& game_state, AudioState& audio_state, Vector2 framebuffer_size);
 
 }

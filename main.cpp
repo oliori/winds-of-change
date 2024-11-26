@@ -9,7 +9,6 @@ int main()
     // Doesn't need smart pointers as when it goes out of scope, the app exits and OS cleans it up
     auto menu_state = woc::MenuState {
         .current_page = woc::MenuPageType::MainMenu,
-        .last_menu_page = woc::MenuPageType::MainMenu,
     };
     auto window = woc::window_init();
     auto renderer = woc::Renderer{};
@@ -51,7 +50,7 @@ int main()
         }
     };
 
-    auto update_game = [&menu_state, &keep_running_app, &game_state, visible = &is_window_visible, window_size = &window_size, &renderer] (woc::InputState input)
+    auto update_game = [&audio_state, &menu_state, &keep_running_app, &game_state, visible = &is_window_visible, window_size = &window_size, &renderer] (woc::InputState input)
     {
         if (input.new_game)
         {
@@ -62,11 +61,12 @@ int main()
         {
             if (menu_state.current_page == woc::MenuPageType::Game)
             {
-                menu_state.current_page = menu_state.last_menu_page;
+                menu_state.current_page = woc::MenuPageType::MainMenu;
+                woc::audio_play_sound(audio_state, woc::AudioType::UIPageChange);
             } else
             {
-                menu_state.last_menu_page = menu_state.current_page;
                 menu_state.current_page = woc::MenuPageType::Game;
+                woc::audio_play_sound(audio_state, woc::AudioType::UIPageChange);
             }
         }
         
@@ -78,7 +78,7 @@ int main()
                 if (*visible)
                 {
                     woc::renderer_prepare_rendering(renderer);
-                    woc::renderer_update_and_render_menu(renderer, menu_state, game_state, *window_size);
+                    woc::renderer_update_and_render_menu(renderer, menu_state, game_state, audio_state, *window_size);
                     woc::renderer_finalize_rendering(renderer);
                 }
                 break;
@@ -104,6 +104,7 @@ int main()
                     {
                         woc::renderer_render_level_fail(renderer, *game_state, *window_size);
                     }
+                    DrawFPS(20, 20);
                     woc::renderer_finalize_rendering(renderer);
                 }
                 break;
@@ -113,7 +114,7 @@ int main()
                 if (*visible)
                 {
                     woc::renderer_prepare_rendering(renderer);
-                    woc::renderer_update_and_render_settings(renderer, menu_state, *window_size);
+                    woc::renderer_update_and_render_settings(renderer, menu_state, audio_state, *window_size);
                     woc::renderer_finalize_rendering(renderer);
                 }
                 break;
@@ -128,7 +129,7 @@ int main()
                 if (*visible)
                 {
                     woc::renderer_prepare_rendering(renderer);
-                    woc::renderer_update_and_render_credits(renderer, menu_state, *window_size);
+                    woc::renderer_update_and_render_credits(renderer, menu_state, audio_state, *window_size);
                     woc::renderer_finalize_rendering(renderer);
                 }
                 break; 
@@ -136,7 +137,7 @@ int main()
         }
     };
 
-    woc::audio_play_sound(audio_state, woc::AudioType::Background);
+    woc::audio_play_sound(audio_state, woc::AudioType::MusicBackground);
     while (keep_running_app)
     {
         update_app();

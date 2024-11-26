@@ -12,11 +12,11 @@ namespace woc
         return Vector2 { static_cast<f32>(PLAYER_DEFAULT_WIDTH), static_cast<f32>(PLAYER_DEFAULT_HEIGHT) };
     }
     
-    woc_internal Rectangle ui_rectangle_from_anchor(Vector2 framebuffer_size, Vector2 anchor, Vector2 size, Vector2 origin = Vector2{0.5f, 0.5f})
+    woc_internal constexpr Rectangle ui_rectangle_from_anchor(Vector2 framebuffer_size, Vector2 anchor, Vector2 size, Vector2 origin = Vector2{0.5f, 0.5f})
     {
-        auto scaled_anchor = Vector2Multiply(framebuffer_size, anchor);
-        auto size_part_from_origin = Vector2Multiply(origin, size);
-        auto pos = Vector2Subtract(scaled_anchor, size_part_from_origin);
+        auto scaled_anchor = Vector2 { framebuffer_size.x * anchor.x, framebuffer_size.y * anchor.y };
+        auto size_part_from_origin  = Vector2 { origin.x * size.x, origin.y * size.y };
+        auto pos = Vector2 { scaled_anchor.x - size_part_from_origin.x, scaled_anchor.y - size_part_from_origin.y  }; 
         auto result = Rectangle {
             .x = pos.x,
             .y = pos.y,
@@ -24,6 +24,13 @@ namespace woc
             .height = size.y
         };
         return result;
+    }
+    
+    woc_internal constexpr Rectangle ui_rectangle_translate(Rectangle rect, Vector2 translation)
+    {
+        rect.x += translation.x;
+        rect.y += translation.y;
+        return rect;
     }
 
     woc_internal void game_load_level(GameState& game_state)
@@ -301,49 +308,95 @@ namespace woc
             game_state.level_status = LevelStatus::Lost;
         }
     }
-
-    void renderer_update_and_render_menu(Renderer& renderer, MenuState& menu_state, std::optional<GameState>& game_state, Vector2 framebuffer_size) {
-        auto button_spacing = 10.f;
-        auto button_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.5f}, Vector2 { 200.f, 50.f }, Vector2{0.5f, 0.0f});
-        if (GuiButton(button_rect, "NEW GAME"))
+    
+    woc_internal bool renderer_ui_button(
+        Rectangle bounds, std::string_view text, bool already_hovered,
+        AudioState& audio_state,
+        bool& out_hover)
+    {
+        out_hover = CheckCollisionPointRec(GetMousePosition(), bounds);
+        if (!already_hovered && out_hover)
         {
-            menu_state.current_page = MenuPageType::Game;
+            audio_play_sound(audio_state, AudioType::UIButtonHover);
+        }
+        
+        if (GuiButton(bounds, text.data()))
+        {
+            audio_play_sound(audio_state, AudioType::UIButtonClick);
+            return true;
+        }
+
+        return false;
+    }
+
+    void renderer_update_and_render_menu(Renderer& renderer, MenuState& menu_state, std::optional<GameState>& game_state, AudioState& audio_state, Vector2 framebuffer_size) {
+        constexpr auto button_spacing = 10.f;
+
+        auto buttons_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.5f}, Vector2 { 200.f, 50.f }, Vector2{0.5f, 0.0f});
+        auto& continue_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(MainMenuButtonType::Continue));
+        if (renderer_ui_button(buttons_rect, "CONTINUE", continue_hover, audio_state, continue_hover))
+        {
+            audio_play_sound(audio_state, AudioType::UIButtonClick);
+            audio_play_sound(audio_state, AudioType::UIPageChange);
+            menu_state = menu_init(MenuPageType::Game);
+        }
+
+        buttons_rect.y += buttons_rect.height + button_spacing;
+        auto& new_game_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(MainMenuButtonType::NewGame));
+        if (renderer_ui_button(buttons_rect, "NEW GAME", new_game_hover, audio_state, new_game_hover))
+        {
+            audio_play_sound(audio_state, AudioType::UIButtonClick);
+            audio_play_sound(audio_state, AudioType::UIPageChange);
+            menu_state = menu_init(MenuPageType::Game);
             game_state = game_init(START_LEVEL);
         }
-        button_rect.y += button_rect.height + button_spacing;
-        if (game_state)
+        
+        buttons_rect.y += buttons_rect.height + button_spacing;
+        auto& settings_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(MainMenuButtonType::Settings));
+        if (renderer_ui_button(buttons_rect, "SETTINGS", settings_hover, audio_state, settings_hover))
         {
-            if (GuiButton(button_rect, "CONTINUE"))
-            {
-                menu_state.current_page = MenuPageType::Game;
-            }
-            button_rect.y += button_rect.height + button_spacing;
+            audio_play_sound(audio_state, AudioType::UIButtonClick);
+            audio_play_sound(audio_state, AudioType::UIPageChange);
+            menu_state = menu_init(MenuPageType::Settings);
         }
-        if (GuiButton(button_rect, "SETTINGS"))
+        
+        buttons_rect.y += buttons_rect.height + button_spacing;
+        auto& credits_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(MainMenuButtonType::Credits));
+        if (renderer_ui_button(buttons_rect, "CREDITS", credits_hover, audio_state, credits_hover))
         {
-            menu_state.current_page = MenuPageType::Settings;
+            audio_play_sound(audio_state, AudioType::UIButtonClick);
+            audio_play_sound(audio_state, AudioType::UIPageChange);
+            menu_state = menu_init(MenuPageType::Credits);
         }
-        button_rect.y += button_rect.height + button_spacing;
-        if (GuiButton(button_rect, "QUIT"))
+        
+        buttons_rect.y += buttons_rect.height + button_spacing;
+        auto& quit_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(MainMenuButtonType::Quit));
+        if (renderer_ui_button(buttons_rect, "QUIT", quit_hover, audio_state, quit_hover))
         {
-            menu_state.current_page = MenuPageType::Quit;
+            audio_play_sound(audio_state, AudioType::UIButtonClick);
+            audio_play_sound(audio_state, AudioType::UIPageChange);
+            menu_state = menu_init(MenuPageType::Quit);
         }
     }
 
-    void renderer_update_and_render_settings(Renderer& renderer, MenuState& menu_state, Vector2 framebuffer_size)
+    void renderer_update_and_render_settings(Renderer& renderer, MenuState& menu_state, AudioState& audio_state, Vector2 framebuffer_size)
     {
         auto button_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.5f}, Vector2 { 200.f, 50.f }, Vector2{0.5f, 0.0f});
         if (GuiButton(button_rect, "BACK"))
         {
+            audio_play_sound(audio_state, AudioType::UIButtonClick);
+            audio_play_sound(audio_state, AudioType::UIPageChange);
             menu_state.current_page = MenuPageType::MainMenu;
         }
     }
     
-    void renderer_update_and_render_credits(Renderer& renderer, MenuState& menu_state, Vector2 framebuffer_size)
+    void renderer_update_and_render_credits(Renderer& renderer, MenuState& menu_state, AudioState& audio_state, Vector2 framebuffer_size)
     {
         auto button_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.5f}, Vector2 { 200.f, 50.f }, Vector2{0.5f, 0.0f});
         if (GuiButton(button_rect, "BACK"))
         {
+            audio_play_sound(audio_state, AudioType::UIButtonClick);
+            audio_play_sound(audio_state, AudioType::UIPageChange);
             menu_state.current_page = MenuPageType::MainMenu;
         }
 
@@ -446,7 +499,6 @@ namespace woc
         if (GuiButton(buttons_rect, "MAIN MENU"))
         {
             menu_state.current_page = MenuPageType::MainMenu;
-            menu_state.last_menu_page = MenuPageType::MainMenu;
             game_state = std::nullopt;
         }
     }
@@ -462,6 +514,15 @@ namespace woc
         ClearBackground(RAYWHITE);
     }
 
+    MenuState menu_init(MenuPageType page)
+    {
+        auto result = MenuState {
+            .current_page = page,
+            .buttons_hover_state = {}
+        };
+        return result;
+    }
+
     AudioState audio_init()
     {
         InitAudioDevice();
@@ -469,7 +530,10 @@ namespace woc
         auto result = AudioState {
             .sounds{}
         };
-        result.sounds.at(static_cast<size_t>(AudioType::Background)) = LoadSound("assets/audio/cozy.ogg");
+        result.sounds.at(static_cast<size_t>(AudioType::MusicBackground)) = LoadSound("assets/audio/cozy.ogg");
+        result.sounds.at(static_cast<size_t>(AudioType::UIPageChange)) = LoadSound("assets/audio/temp/card-slide-6.ogg");
+        result.sounds.at(static_cast<size_t>(AudioType::UIButtonHover)) = LoadSound("assets/audio/temp/chips-handle-3.ogg");
+        result.sounds.at(static_cast<size_t>(AudioType::UIButtonClick)) = LoadSound("assets/audio/temp/die-throw-1.ogg");
 
         return result;
     }
