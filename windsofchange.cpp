@@ -6,7 +6,12 @@ namespace woc
     {
         return Vector2 { player_state.pos_x, PLAYER_WORLD_Y };
     }
-
+    
+    woc_internal Vector2 player_size()
+    {
+        return Vector2 { static_cast<f32>(PLAYER_DEFAULT_WIDTH), static_cast<f32>(PLAYER_DEFAULT_HEIGHT) };
+    }
+    
     woc_internal Rectangle ui_rectangle_from_anchor(Vector2 framebuffer_size, Vector2 anchor, Vector2 size, Vector2 origin = Vector2{0.5f, 0.5f})
     {
         auto scaled_anchor = Vector2Multiply(framebuffer_size, anchor);
@@ -23,10 +28,25 @@ namespace woc
 
     void game_load_level(GameState& game_state)
     {
+        auto& enemies = game_state.enemies;
+        enemies.clear();
+        
+        //constexpr Vector2 WORLD_MIN = Vector2{ -700, -500 };
+        //constexpr Vector2 WORLD_MAX = Vector2{ 700, 500 };
         switch (game_state.current_level)
         {
             case 0:
             {
+                enemies.emplace_back(EnemyState {
+                    .pos = Vector2 { -0.f, -300.f },
+                    .size = Vector2 { 100.f, 25.f },
+                    .health = 1,
+                });
+                enemies.emplace_back(EnemyState {
+                    .pos = Vector2 { -0.f, -100.f },
+                    .size = Vector2 { 100.f, 25.f },
+                    .health = 1,
+                });
                 break;
             }
             default:
@@ -43,6 +63,9 @@ namespace woc
             .time_scale = 1.0,
             .player = woc::PlayerState {
                 .pos_x = 0.f,
+                .vel = 0.f,
+                .accel = 0.f,
+                .balls_available = 1,
             },
             .cam = woc::Camera {
                 .pos = Vector2 { 0.0, 0.0 },
@@ -50,11 +73,81 @@ namespace woc
                 .rot = woc::Radian { 0.0 },
                 .zoom = 1.0f,
             },
+            .enemies = {},
             .player_projectiles = {},
         };
         game_load_level(result);
         
         return result;
+    }
+
+    woc_internal bool sphere_collides_sphere(
+        Vector2 sphere_pos1, f32 sphere_radius1,
+        Vector2 sphere_pos2, f32 sphere_radius2)
+    {
+        auto combined_r = sphere_radius1 + sphere_radius2;
+        auto dist_sqr = Vector2DistanceSqr(sphere_pos1, sphere_pos2);
+        return dist_sqr <= combined_r * combined_r;
+    }
+
+    // Returns normal of collision or zero vector if no collision.
+    woc_internal Vector2 sphere_collides_rectangle(
+        Vector2 sphere_pos, f32 sphere_radius,
+        Vector2 rectangle_pos, Vector2 rectangle_size, Radian rectangle_rotation)
+    {
+        
+        auto result = Vector2Zero();
+        
+        auto half_size = Vector2Scale(rectangle_size, 0.5f);
+        auto s_pos2 = Vector2Subtract(sphere_pos, rectangle_pos);
+        s_pos2 = Vector2Rotate(s_pos2, -rectangle_rotation.val);
+
+        bool inside_x = false;
+        bool inside_y = false;
+        Vector2 test_point = s_pos2;
+        if (s_pos2.x < -half_size.x) // LEFT
+        {
+            test_point.x = -half_size.x;
+            result.x = -1.f;
+        } else if (s_pos2.x > half_size.x) // RIGHT
+        {
+            test_point.x = half_size.x;
+            result.x = 1.f;
+        } else
+        {
+            inside_x = true;
+        }
+
+        if (s_pos2.y > half_size.y) // ABOVE
+        {
+            test_point.y = half_size.y;
+            result.y = 1.f;
+        } else if (s_pos2.y < -half_size.y) // BELOW
+        {
+            test_point.y = -half_size.y;
+            if (Vector2DistanceSqr(s_pos2, Vector2 { s_pos2.x, -half_size.y }) < sphere_radius * sphere_radius)
+            {
+                result.y = -1.f;
+            }
+        } else
+        {
+            inside_y = true;
+        }
+
+        // INSIDE
+        if (inside_y && inside_x)
+        {
+            // For simplicity just return up vector now if we get inside the rectangle
+            // Ideally this should find the intersection point using the velocity
+            result = Vector2 { 0.0f, 1.0f };
+        }
+        
+        if (Vector2DistanceSqr(s_pos2, test_point) > sphere_radius * sphere_radius)
+        {
+            return Vector2Zero();
+        }
+
+        return Vector2Rotate(result, rectangle_rotation.val);
     }
 
     void game_update(GameState& game_state, InputState& input, f32 delta_seconds)
@@ -77,7 +170,39 @@ namespace woc
         game_state.player.vel += game_state.player.accel * delta_seconds;
         game_state.player.vel = Clamp(game_state.player.vel, PLAYER_MIN_VEL, PLAYER_MAX_VEL);
         game_state.player.pos_x += game_state.player.vel * delta_seconds;
-        game_state.player.pos_x = Clamp(game_state.player.pos_x, WORLD_MIN.x + static_cast<f32>(PLAYER_DEFAULT_WIDTH / 2), WORLD_MAX.x - static_cast<f32>(PLAYER_DEFAULT_WIDTH / 2));
+        game_state.player.pos_x = Clamp(game_state.player.pos_x, WORLD_MIN.x + static_cast<f32>(PLAYER_DEFAULT_WIDTH) * 0.5f, WORLD_MAX.x - static_cast<f32>(PLAYER_DEFAULT_WIDTH) * 0.5f);
+
+        for (auto& p : game_state.player_projectiles)
+        {
+            p.pos = Vector2Add(p.pos, Vector2Scale(p.dir, BALL_DEFAULT_VELOCITY * delta_seconds));
+
+            for (auto& e : game_state.enemies)
+            {
+                auto collision_normal = sphere_collides_rectangle(p.pos, BALL_DEFAULT_RADIUS, e.pos, e.size, Radian { 0.0f });
+                if (!Vector2Equals(collision_normal, Vector2Zero()))
+                {
+                    p.dir = Vector2Reflect(p.dir, collision_normal);
+                    break;
+                }
+            }
+            
+            auto collision_normal = sphere_collides_rectangle(p.pos, BALL_DEFAULT_RADIUS, player_pos(game_state.player), player_size(), Radian { 0.0f });
+            if (!Vector2Equals(collision_normal, Vector2Zero()))
+            {
+                p.dir = Vector2Reflect(p.dir, collision_normal);
+                break;
+            }
+        }
+
+        if (input.send_ball & game_state.player.balls_available)
+        {
+            game_state.player_projectiles.emplace_back(Projectile {
+                .pos = Vector2Add(player_pos(game_state.player), Vector2 { 0.f, static_cast<f32>(-BALL_DEFAULT_Y_OFFSET) }),
+                .dir = Vector2 { 0, -1 }
+            });
+            game_state.player.balls_available--;
+        }
+        
     }
 
     void renderer_update_and_render_menu(Renderer& renderer, MenuState& menu_state, std::optional<GameState>& game_state, Vector2 framebuffer_size) {
@@ -136,11 +261,24 @@ namespace woc
         auto py = static_cast<i32>(PLAYER_WORLD_Y);
         DrawRectangle(px - PLAYER_DEFAULT_WIDTH / 2, py - PLAYER_DEFAULT_HEIGHT / 2, PLAYER_DEFAULT_WIDTH, PLAYER_DEFAULT_HEIGHT, RED);
         
+        for (auto& e : game_state.enemies)
+        {
+            auto ex = static_cast<i32>(e.pos.x);
+            auto ey = static_cast<i32>(e.pos.y);
+            auto half_size = Vector2Scale(e.size, 0.5f);
+            DrawRectangle(ex - static_cast<i32>(half_size.x), ey - static_cast<i32>(half_size.y), static_cast<i32>(e.size.x), static_cast<i32>(e.size.y), RED);
+        }
+        
+        if (game_state.player.balls_available)
+        {
+            DrawCircle(px, py - BALL_DEFAULT_Y_OFFSET, BALL_DEFAULT_RADIUS, Color { 127, 0, 0, 127 });
+        }
+        
         for (auto& projectile : game_state.player_projectiles)
         {
             auto px = static_cast<i32>(projectile.pos.x);
             auto py = static_cast<i32>(projectile.pos.y);
-            DrawCircle(px, py, 10, PINK);
+            DrawCircle(px, py, BALL_DEFAULT_RADIUS, PINK);
         }
 
         EndMode2D();

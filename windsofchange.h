@@ -34,6 +34,9 @@ namespace woc
     constexpr f32 PLAYER_WORLD_Y = 400.f;
     constexpr i32 PLAYER_DEFAULT_WIDTH = 100;
     constexpr i32 PLAYER_DEFAULT_HEIGHT = 25;
+    constexpr f32 BALL_DEFAULT_VELOCITY = 200.f;
+    constexpr i32 BALL_DEFAULT_RADIUS = 10;
+    constexpr i32 BALL_DEFAULT_Y_OFFSET = 25;
     
     struct Radian {
         f32 val;
@@ -53,10 +56,13 @@ namespace woc
         f32 pos_x;
         f32 vel;
         f32 accel;
+        u32 balls_available;
     };
     
     struct EnemyState {
-        f32 health;
+        Vector2 pos;
+        Vector2 size;
+        u32 health;
     };
 
     struct InputState {
@@ -93,6 +99,7 @@ namespace woc
         f32 time_scale = 1.0f;
         PlayerState player;
         Camera cam;
+        std::vector<EnemyState> enemies;
         std::vector<Projectile> player_projectiles;
     };
     GameState game_init();
