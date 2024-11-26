@@ -14,6 +14,7 @@ int main()
     auto window = woc::window_init();
     auto renderer = woc::Renderer{};
     auto game_state = std::optional<woc::GameState>{};
+    auto audio_state = woc::audio_init();
 
     // TODO: Edit raylib config and disable rmodels
 
@@ -122,9 +123,20 @@ int main()
                 keep_running_app = false;
                 break;
             }
+            case woc::MenuPageType::Credits:
+            {
+                if (*visible)
+                {
+                    woc::renderer_prepare_rendering(renderer);
+                    woc::renderer_update_and_render_credits(renderer, menu_state, *window_size);
+                    woc::renderer_finalize_rendering(renderer);
+                }
+                break; 
+            }
         }
     };
 
+    woc::audio_play_sound(audio_state, woc::AudioType::Background);
     while (keep_running_app)
     {
         update_app();
@@ -132,7 +144,8 @@ int main()
         app_input_state = woc::InputState{};
     }
 
-    // Unnecessary before a program exit. OS cleans up. 
+    // Unnecessary before a program exit. OS cleans up.
+    woc::audio_deinit(audio_state);
     woc::window_deinit(window);
 
     return 0;

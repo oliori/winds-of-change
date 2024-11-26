@@ -108,7 +108,8 @@ namespace woc
         MainMenu,
         Game,
         Settings,
-        Quit
+        Quit,
+        Credits
     };
     struct MenuState
     {
@@ -145,5 +146,18 @@ namespace woc
     void renderer_render_game_won(Renderer& renderer, MenuState& menu_state, GameState& game_state, Vector2 framebuffer_size);
     void renderer_finalize_rendering(Renderer& renderer);
     void renderer_prepare_rendering(Renderer& renderer);
+
+    enum class AudioType : u32
+    {
+        Background = 0,
+        MAX_AUDIO_TYPE
+    };
+    struct AudioState
+    {
+        std::array<Sound, static_cast<size_t>(AudioType::MAX_AUDIO_TYPE)> sounds;
+    };
+    AudioState audio_init();
+    void audio_deinit(AudioState& audio_state);
+    void audio_play_sound(AudioState& audio_state, AudioType sound_type);
 
 }

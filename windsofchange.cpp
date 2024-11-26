@@ -338,6 +338,17 @@ namespace woc
             menu_state.current_page = MenuPageType::MainMenu;
         }
     }
+    
+    void renderer_update_and_render_credits(Renderer& renderer, MenuState& menu_state, Vector2 framebuffer_size)
+    {
+        auto button_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.5f}, Vector2 { 200.f, 50.f }, Vector2{0.5f, 0.0f});
+        if (GuiButton(button_rect, "BACK"))
+        {
+            menu_state.current_page = MenuPageType::MainMenu;
+        }
+
+        // Background music credits
+    }
 
     void renderer_render_world(Renderer& renderer, GameState& game_state, Vector2 framebuffer_size)
     {
@@ -449,5 +460,32 @@ namespace woc
     {
         BeginDrawing();
         ClearBackground(RAYWHITE);
+    }
+
+    AudioState audio_init()
+    {
+        InitAudioDevice();
+
+        auto result = AudioState {
+            .sounds{}
+        };
+        result.sounds.at(static_cast<size_t>(AudioType::Background)) = LoadSound("assets/audio/cozy.ogg");
+
+        return result;
+    }
+
+    void audio_deinit(AudioState& audio_state)
+    {
+        for (auto& sound : audio_state.sounds)
+        {
+            UnloadSound(sound);
+        }
+        CloseAudioDevice();
+    }
+
+    void audio_play_sound(AudioState& audio_state, AudioType sound_type)
+    {
+        assert(sound_type < AudioType::MAX_AUDIO_TYPE);
+        PlaySound(audio_state.sounds.at((size_t)sound_type));
     }
 }
