@@ -32,6 +32,11 @@ namespace woc
     {
         auto& enemies = game_state.enemies;
         enemies.clear();
+        game_state.player_projectiles.clear();
+        game_state.time_scale = 1.0f;
+        game_state.level_status = LevelStatus::InProgress;
+        game_state.player.balls_available = 0;
+        game_state.player.wind_available = 0;
         
         //constexpr Vector2 WORLD_MIN = Vector2{ -700, -500 };
         //constexpr Vector2 WORLD_MAX = Vector2{ 700, 500 };
@@ -40,17 +45,40 @@ namespace woc
             case 0:
             {
                 enemies.emplace_back(EnemyState {
-                    .pos = Vector2 { -0.f, -300.f },
+                    .pos = Vector2 { -200.f, -300.f },
                     .size = Vector2 { 100.f, 25.f },
                     .health = 1,
+                    .type = EnemyType::Normal,
                     .contributes_to_win = true
                 });
                 enemies.emplace_back(EnemyState {
-                    .pos = Vector2 { -0.f, -100.f },
+                    .pos = Vector2 { -200.f, -100.f },
                     .size = Vector2 { 100.f, 25.f },
                     .health = 1,
+                    .type = EnemyType::Normal,
                     .contributes_to_win = true
                 });
+                game_state.player.balls_available = 1;
+                break;
+            }
+            case 1:
+            {
+                enemies.emplace_back(EnemyState {
+                    .pos = Vector2 { -500.f, -300.f },
+                    .size = Vector2 { 300.f, 25.f },
+                    .health = 1,
+                    .type = EnemyType::Normal,
+                    .contributes_to_win = true
+                });
+                enemies.emplace_back(EnemyState {
+                    .pos = Vector2 { -200.f, 300.f },
+                    .size = Vector2 { 1000.f, 25.f },
+                    .health = 0,
+                    .type = EnemyType::Indestructible,
+                    .contributes_to_win = false
+                });
+                game_state.player.balls_available = 1;
+                game_state.player.wind_available = 1;
                 break;
             }
             default:
@@ -60,16 +88,18 @@ namespace woc
         }
     }
 
-    GameState game_init()
+    GameState game_init(u32 level)
     {
         auto result = woc::GameState{
-            .current_level = 0,
+            .current_level = level,
             .time_scale = 1.0,
+            .level_status = LevelStatus::InProgress,
             .player = woc::PlayerState {
                 .pos_x = 0.f,
                 .vel = 0.f,
                 .accel = 0.f,
-                .balls_available = 1,
+                .balls_available = 0,
+                .wind_available = 0,
             },
             .cam = woc::Camera {
                 .pos = Vector2 { 0.0, 0.0 },
@@ -80,6 +110,7 @@ namespace woc
             .enemies = {},
             .player_projectiles = {},
         };
+
         game_load_level(result);
         
         return result;
@@ -161,9 +192,9 @@ namespace woc
         constexpr f32 PLAYER_ACCELERATION = 1500.0f;
         constexpr f32 GROUND_FRICTION = 750.0f;
 
-        if (game_state.level_complete)
+        if (game_state.level_status != LevelStatus::InProgress)
         {
-            game_state.time_scale = std::max(game_state.time_scale - delta_seconds, 0.f);
+            game_state.time_scale = std::max(0.0f, game_state.time_scale - delta_seconds);
         }
         delta_seconds *= game_state.time_scale;
 
@@ -179,6 +210,11 @@ namespace woc
         game_state.player.vel = Clamp(game_state.player.vel, PLAYER_MIN_VEL, PLAYER_MAX_VEL);
         game_state.player.pos_x += game_state.player.vel * delta_seconds;
         game_state.player.pos_x = Clamp(game_state.player.pos_x, WORLD_MIN.x + static_cast<f32>(PLAYER_DEFAULT_WIDTH) * 0.5f, WORLD_MAX.x - static_cast<f32>(PLAYER_DEFAULT_WIDTH) * 0.5f);
+
+        std::erase_if(game_state.player_projectiles, [] (Projectile& p)
+        {
+            return p.pos.x < WORLD_MIN.x | p.pos.x > WORLD_MAX.x | p.pos.y < WORLD_MIN.y | p.pos.y > WORLD_MAX.y;
+        });
 
         for (auto& p : game_state.player_projectiles)
         {
@@ -205,7 +241,7 @@ namespace woc
 
         std::erase_if(game_state.enemies, [] (EnemyState& e)
         {
-            return e.health <= 0;
+            return e.health <= 0 && e.type != EnemyType::Indestructible;
         });
 
         if (input.send_ball & game_state.player.balls_available)
@@ -216,8 +252,14 @@ namespace woc
             });
             game_state.player.balls_available--;
         }
-        
-        game_state.level_complete = !std::ranges::any_of(game_state.enemies, [] (EnemyState& e) { return e.contributes_to_win; });
+
+        if (game_state.level_status == LevelStatus::InProgress && !std::ranges::any_of(game_state.enemies, [] (EnemyState& e) { return e.contributes_to_win; })) 
+        {
+            game_state.level_status = LevelStatus::Won;
+        } else if (game_state.level_status == LevelStatus::InProgress && !game_state.player.balls_available && game_state.player_projectiles.empty())
+        {
+            game_state.level_status = LevelStatus::Lost;
+        }
     }
 
     void renderer_update_and_render_menu(Renderer& renderer, MenuState& menu_state, std::optional<GameState>& game_state, Vector2 framebuffer_size) {
@@ -226,7 +268,7 @@ namespace woc
         if (GuiButton(button_rect, "NEW GAME"))
         {
             menu_state.current_page = MenuPageType::Game;
-            game_state = game_init();
+            game_state = game_init(START_LEVEL);
         }
         button_rect.y += button_rect.height + button_spacing;
         if (game_state)
@@ -296,14 +338,27 @@ namespace woc
 
         EndMode2D();
 
+        i32 fbx = static_cast<i32>(framebuffer_size.x);
+        i32 fby = static_cast<i32>(framebuffer_size.y);
+        
         i32 balls_available_spacing = 20;
         i32 balls_available_size = 30;
-        i32 balls_available_pos_x = framebuffer_size.x - balls_available_spacing - balls_available_size;
-        i32 balls_available_pos_y = framebuffer_size.y - balls_available_spacing - balls_available_size;
+        i32 balls_available_pos_x = fbx - balls_available_spacing - balls_available_size;
+        i32 balls_available_pos_y = fby - balls_available_spacing - balls_available_size;
         for (u32 i = 0; i < game_state.player.balls_available; i++)
         {
-            DrawCircle(balls_available_pos_x, balls_available_pos_y, balls_available_size, PINK);
-            balls_available_pos_x -= balls_available_spacing + balls_available_size;
+            DrawCircle(balls_available_pos_x, balls_available_pos_y, static_cast<f32>(balls_available_size), PINK);
+            balls_available_pos_y -= balls_available_spacing + balls_available_size;
+        }
+        
+        i32 wind_available_spacing = 20;
+        i32 wind_available_size = 30;
+        i32 wind_available_pos_x = fbx - wind_available_spacing - wind_available_size;
+        i32 wind_available_pos_y = fby - wind_available_spacing - wind_available_size;
+        for (u32 i = 0; i < game_state.player.wind_available; i++)
+        {
+            DrawCircle(wind_available_pos_x, wind_available_pos_y, static_cast<f32>(wind_available_size), YELLOW);
+            wind_available_pos_y -= wind_available_spacing + wind_available_size;
         }
     }
 

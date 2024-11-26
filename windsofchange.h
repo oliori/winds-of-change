@@ -29,6 +29,7 @@ namespace woc
     using f32 = float;
     using f64 = double;
     
+    constexpr u32 START_LEVEL = 1;
     constexpr Vector2 WORLD_MIN = Vector2{ -700, -500 };
     constexpr Vector2 WORLD_MAX = Vector2{ 700, 500 };
     constexpr f32 PLAYER_WORLD_Y = 400.f;
@@ -57,12 +58,19 @@ namespace woc
         f32 vel;
         f32 accel;
         u32 balls_available;
+        u32 wind_available;
     };
-    
+
+    enum class EnemyType
+    {
+        Indestructible,
+        Normal,
+    };
     struct EnemyState {
         Vector2 pos;
         Vector2 size;
         i32 health;
+        EnemyType type;
         bool contributes_to_win;
     };
 
@@ -95,10 +103,17 @@ namespace woc
         MenuPageType last_menu_page;
     };
 
+    enum class LevelStatus
+    {
+        InProgress,
+        Lost,
+        Won
+    };
+
     struct GameState {
         u32 current_level = 0; 
         f32 time_scale = 1.0f;
-        bool level_complete;
+        LevelStatus level_status;
         PlayerState player;
         Camera cam;
         std::vector<EnemyState> enemies;
@@ -106,7 +121,6 @@ namespace woc
     };
     GameState game_init();
     void game_update(GameState& game_state, InputState& input, f32 delta_seconds);
-    void game_load_level(GameState& game_state);
 
     struct Renderer {
     };

@@ -54,7 +54,7 @@ int main()
     {
         if (input.new_game)
         {
-            game_state = woc::game_init();
+            game_state = woc::game_init(woc::START_LEVEL);
         }
         
         if (input.game_menu_swap % 2 == 1)
