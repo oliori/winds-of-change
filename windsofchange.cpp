@@ -57,7 +57,7 @@ namespace woc
             case 1:
             {
                 enemies.emplace_back(EnemyState {
-                    .pos = Vector2 { -500.f, -300.f },
+                    .pos = Vector2 { -200.f, -300.f },
                     .size = Vector2 { 300.f, 25.f },
                     .health = 1,
                     .type = EnemyType::Normal,
@@ -91,8 +91,10 @@ namespace woc
                 .pos_x = 0.f,
                 .vel = 0.f,
                 .accel = 0.f,
+                .ball_velocity = BALL_DEFAULT_VELOCITY,
                 .balls_available = 0,
                 .wind_available = 0,
+                .active_wind_ability = std::nullopt
             },
             .cam = woc::Camera {
                 .pos = Vector2 { 0.0, 0.0 },
@@ -211,7 +213,7 @@ namespace woc
 
         for (auto& p : game_state.player_projectiles)
         {
-            p.pos = Vector2Add(p.pos, Vector2Scale(p.dir, BALL_DEFAULT_VELOCITY * delta_seconds));
+            p.pos = Vector2Add(p.pos, Vector2Scale(p.dir, game_state.player.ball_velocity * delta_seconds));
 
             for (auto& e : game_state.enemies)
             {
@@ -244,6 +246,53 @@ namespace woc
                 .dir = Vector2 { 0, -1 }
             });
             game_state.player.balls_available--;
+        }
+
+        if (!game_state.player.active_wind_ability && game_state.player.wind_available)
+        {
+            if (input.wind_dir_x) {
+                game_state.player.active_wind_ability = WindAbility {
+                    .timer = WIND_DURATION,
+                    .angle = Radian { .val = static_cast<f32>(input.wind_dir_x) * PI / 4 },
+                    .ball_current_velocity = game_state.player.ball_velocity,
+                    .ball_target_velocity = game_state.player.ball_velocity
+                };
+                game_state.player.wind_available--;
+            } else if (input.wind_dir_y == 1) {
+                game_state.player.active_wind_ability = WindAbility {
+                    .timer = WIND_DURATION,
+                    .angle = Radian { .val = 0 },
+                    .ball_current_velocity = game_state.player.ball_velocity,
+                    .ball_target_velocity = game_state.player.ball_velocity * 1.5f
+                };
+                game_state.player.wind_available--;
+            } else if (input.wind_dir_y == -1) {
+                game_state.player.active_wind_ability = WindAbility {
+                    .timer = WIND_DURATION,
+                    .angle = Radian { 0.0f },
+                    .ball_current_velocity = game_state.player.ball_velocity,
+                    .ball_target_velocity = game_state.player.ball_velocity * -1.0f
+                };
+                game_state.player.wind_available--;
+            }
+        }
+        if (auto& wind = game_state.player.active_wind_ability)
+        {
+            auto wind_delta = std::min(delta_seconds, wind->timer);
+            f32 delta_decimal = Clamp(wind_delta / WIND_DURATION, 0.0f, 1.0f);
+            f32 total_delta_velocity = wind->ball_target_velocity - wind->ball_current_velocity;
+            game_state.player.ball_velocity += total_delta_velocity * delta_decimal;
+
+            for (auto& p : game_state.player_projectiles)
+            {
+                p.dir = Vector2Rotate(p.dir, delta_decimal * wind->angle.val);
+            }
+
+            wind->timer -= wind_delta;
+            if (wind->timer < 0.f)
+            {
+                wind = std::nullopt;
+            } 
         }
 
         if (game_state.level_status == LevelStatus::InProgress && !std::ranges::any_of(game_state.enemies, [] (EnemyState& e) { return e.contributes_to_win; })) 
