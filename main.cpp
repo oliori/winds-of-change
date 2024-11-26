@@ -1,5 +1,5 @@
-#include "windsofchange.cpp"
-#include "window.cpp"
+#include "src/windsofchange.cpp"
+#include "src/window.cpp"
 
 // KNOWN ISSUES:
 // - Input lag. Move to another thread?
@@ -14,6 +14,8 @@ int main()
     auto renderer = woc::Renderer{};
     auto game_state = std::optional<woc::GameState>{};
     auto audio_state = woc::audio_init();
+
+    GuiLoadStyleBluish();
 
     // TODO: Edit raylib config and disable rmodels
 

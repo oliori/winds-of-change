@@ -4,6 +4,7 @@
 #include "raymath.h"
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
+#include "gui_styles/style_bluish.h"
 
 #include <algorithm>
 #include <cstdint>

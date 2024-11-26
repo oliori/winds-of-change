@@ -334,13 +334,18 @@ namespace woc
 
         auto buttons_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.5f}, Vector2 { 200.f, 50.f }, Vector2{0.5f, 0.0f});
         auto& continue_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(MainMenuButtonType::Continue));
+        if (!game_state)
+        {
+            GuiSetState(STATE_DISABLED);
+        }
         if (renderer_ui_button(buttons_rect, "CONTINUE", continue_hover, audio_state, continue_hover))
         {
             audio_play_sound(audio_state, AudioType::UIButtonClick);
             audio_play_sound(audio_state, AudioType::UIPageChange);
             menu_state = menu_init(MenuPageType::Game);
         }
-
+        GuiSetState(STATE_NORMAL);
+        
         buttons_rect.y += buttons_rect.height + button_spacing;
         auto& new_game_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(MainMenuButtonType::NewGame));
         if (renderer_ui_button(buttons_rect, "NEW GAME", new_game_hover, audio_state, new_game_hover))
