@@ -111,19 +111,11 @@ int main()
         }
     };
 
-    woc::InputState game_input_state{};
     while (keep_running_app)
     {
         update_app();
-        
-        // Create delta from current app thread's state
-        auto temp = app_input_state;
-        auto input = temp;
-        input.game_menu_swap -= game_input_state.game_menu_swap;
-        input.new_game -= game_input_state.new_game;
-        game_input_state = temp;
-        
-        update_game(input);
+        update_game(app_input_state);
+        app_input_state = woc::InputState{};
     }
 
     // Unnecessary before a program exit. OS cleans up. 

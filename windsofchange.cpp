@@ -28,16 +28,9 @@ namespace woc
         return result;
     }
 
-    void game_load_level(GameState& game_state)
+    woc_internal void game_load_level(GameState& game_state)
     {
         auto& enemies = game_state.enemies;
-        enemies.clear();
-        game_state.player_projectiles.clear();
-        game_state.time_scale = 1.0f;
-        game_state.level_status = LevelStatus::InProgress;
-        game_state.player.balls_available = 0;
-        game_state.player.wind_available = 0;
-        
         //constexpr Vector2 WORLD_MIN = Vector2{ -700, -500 };
         //constexpr Vector2 WORLD_MAX = Vector2{ 700, 500 };
         switch (game_state.current_level)
@@ -353,12 +346,30 @@ namespace woc
         
         i32 wind_available_spacing = 20;
         i32 wind_available_size = 30;
-        i32 wind_available_pos_x = fbx - wind_available_spacing - wind_available_size;
+        i32 wind_available_pos_x = balls_available_pos_x - balls_available_spacing - balls_available_size * 2;
         i32 wind_available_pos_y = fby - wind_available_spacing - wind_available_size;
         for (u32 i = 0; i < game_state.player.wind_available; i++)
         {
             DrawCircle(wind_available_pos_x, wind_available_pos_y, static_cast<f32>(wind_available_size), YELLOW);
             wind_available_pos_y -= wind_available_spacing + wind_available_size;
+        }
+
+        if (game_state.level_status == LevelStatus::Won)
+        {
+            DrawRectangle(0, 0, fbx, fby, Color{0, 0, 0, static_cast<u8>(Lerp(225.f, 0.f, game_state.time_scale * game_state.time_scale))});
+            auto buttons_rect = ui_rectangle_from_anchor(framebuffer_size, { 0.5, 0.5 }, { 200.f, 50.f});
+            if (GuiButton(buttons_rect, "NEXT LEVEL"))
+            {
+                game_state = game_init(game_state.current_level+1);
+            }
+        } else if (game_state.level_status == LevelStatus::Lost)
+        {
+            DrawRectangle(0, 0, fbx, fby, Color{0, 0, 0, static_cast<u8>(Lerp(225.f, 0.f, game_state.time_scale * game_state.time_scale))});
+            auto buttons_rect = ui_rectangle_from_anchor(framebuffer_size, { 0.5, 0.5 }, { 200.f, 50.f});
+            if (GuiButton(buttons_rect, "TRY AGAIN"))
+            {
+                game_state = game_init(game_state.current_level);
+            }
         }
     }
 
