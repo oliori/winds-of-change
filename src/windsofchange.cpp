@@ -97,7 +97,7 @@ namespace woc
             case 3:
             {
                 enemies.emplace_back(EnemyState {
-                    .pos = Vector2 { WORLD_MAX.x, -300.f },
+                    .pos = Vector2 { WORLD_MAX.x - WALL_SIZE_DEFAULT.x, 0.f },
                     .size = WALL_SIZE_DEFAULT,
                     .health = 1,
                     .rot = Radian { PI / 2.f },
@@ -105,12 +105,50 @@ namespace woc
                     .contributes_to_win = true
                 });
                 enemies.emplace_back(EnemyState {
-                    .pos = Vector2 { 0.f, WORLD_MAX.y },
+                    .pos = Vector2 { 0.f, WORLD_MIN.y + WALL_SIZE_DEFAULT.y },
                     .size = WALL_SIZE_DEFAULT,
-                    .health = 0,
+                    .health = 1,
                     .rot = Radian { 0.f },
-                    .type = EnemyType::Indestructible,
-                    .contributes_to_win = false
+                    .type = EnemyType::Normal,
+                    .contributes_to_win = true
+                });
+                game_state.player.balls_available = 1;
+                game_state.player.wind_available = 1;
+                break;
+            }
+            case 4:
+            {
+                enemies.emplace_back(EnemyState {
+                    .pos = Vector2 { WORLD_MAX.x - WALL_SIZE_DEFAULT.x, 0.f },
+                    .size = WALL_SIZE_DEFAULT,
+                    .health = 1,
+                    .rot = Radian { PI / 2.f },
+                    .type = EnemyType::Normal,
+                    .contributes_to_win = true
+                });
+                enemies.emplace_back(EnemyState {
+                    .pos = Vector2 { WORLD_MIN.x + WALL_SIZE_DEFAULT.x * 5, 0.f },
+                    .size = WALL_SIZE_DEFAULT,
+                    .health = 1,
+                    .rot = Radian { PI / 2.f },
+                    .type = EnemyType::Normal,
+                    .contributes_to_win = true
+                });
+                enemies.emplace_back(EnemyState {
+                    .pos = Vector2 { WORLD_MIN.x + WALL_SIZE_DEFAULT.x, 0.f },
+                    .size = WALL_SIZE_DEFAULT,
+                    .health = 1,
+                    .rot = Radian { PI / 2.f },
+                    .type = EnemyType::Normal,
+                    .contributes_to_win = true
+                });
+                enemies.emplace_back(EnemyState {
+                    .pos = Vector2 { 0.f, WORLD_MIN.y + WALL_SIZE_DEFAULT.y },
+                    .size = WALL_SIZE_DEFAULT,
+                    .health = 1,
+                    .rot = Radian { 0.f },
+                    .type = EnemyType::Normal,
+                    .contributes_to_win = true
                 });
                 game_state.player.balls_available = 1;
                 game_state.player.wind_available = 1;
