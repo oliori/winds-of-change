@@ -3,7 +3,7 @@
 
 // TODO:
 // - SFX: Send ball, Use wind, Ball disappear, Level lost, Level won, Wall disappear, Game won
-// - Polish: Ball disappear squish, Tweak ball movement speed, Add more levels, Better Level won/lost UI, Better game won UI
+// - Polish: Tweak ball movement speed, Add more levels, Better Level won/lost UI, Better game won UI
 // - Missing: Settings page, Credits page, Disable rmodels in raylib
 // - Fix: Weird collision with ball, input issue
 // - Extra: Add moving walls

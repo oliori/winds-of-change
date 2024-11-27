@@ -389,6 +389,8 @@ namespace woc
         texture_from_type(result, TextureType::KeyDown) = LoadTexture("assets/textures/down_key.png");
         texture_from_type(result, TextureType::KeyLeft) = LoadTexture("assets/textures/left_key.png");
         texture_from_type(result, TextureType::KeyRight) = LoadTexture("assets/textures/right_key.png");
+        
+        GuiSetStyle(DEFAULT, TEXT_SIZE, 30);
 
         return result;
     }
@@ -423,14 +425,22 @@ namespace woc
 
     void renderer_update_and_render_menu(Renderer& renderer, MenuState& menu_state, std::optional<GameState>& game_state, AudioState& audio_state, Vector2 framebuffer_size) {
         constexpr auto button_spacing = 10.f;
-
-        auto buttons_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.5f}, Vector2 { 200.f, 50.f }, Vector2{0.5f, 0.0f});
+        
+        auto title_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.5}, Vector2 { framebuffer_size.x, 150.f }, Vector2{0.5f, 0.0f});
+        title_rect.y -= title_rect.height + 40;
+        GuiSetStyle(DEFAULT, TEXT_SIZE, 125);
+        GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_CENTER);
+        GuiLabel(title_rect, "Winds of Change");
+        
+        GuiSetStyle(DEFAULT, TEXT_SIZE, 65);
+        auto primary_buttons_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.5f}, Vector2 { 400.f, 100.f }, Vector2{0.5f, 0.0f});
+        auto secondary_buttons_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.5f}, Vector2 { 300.f, 60.f }, Vector2{0.5f, 0.0f});
         auto& continue_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(MainMenuButtonType::Continue));
         if (!game_state)
         {
             GuiSetState(STATE_DISABLED);
         }
-        if (renderer_ui_button(buttons_rect, "CONTINUE", continue_hover, audio_state, continue_hover))
+        if (renderer_ui_button(primary_buttons_rect, "CONTINUE", continue_hover, audio_state, continue_hover))
         {
             audio_play_sound_randomize_pitch(audio_state, AudioType::UIButtonClick);
             audio_play_sound_randomize_pitch(audio_state, AudioType::UIPageChange);
@@ -438,9 +448,11 @@ namespace woc
         }
         GuiSetState(STATE_NORMAL);
         
-        buttons_rect.y += buttons_rect.height + button_spacing;
+        primary_buttons_rect.y += primary_buttons_rect.height + button_spacing;
+        secondary_buttons_rect.y += primary_buttons_rect.height + button_spacing;
+        
         auto& new_game_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(MainMenuButtonType::NewGame));
-        if (renderer_ui_button(buttons_rect, "NEW GAME", new_game_hover, audio_state, new_game_hover))
+        if (renderer_ui_button(primary_buttons_rect, "NEW GAME", new_game_hover, audio_state, new_game_hover))
         {
             audio_play_sound_randomize_pitch(audio_state, AudioType::UIButtonClick);
             audio_play_sound_randomize_pitch(audio_state, AudioType::UIPageChange);
@@ -448,27 +460,29 @@ namespace woc
             game_state = game_init(START_LEVEL);
         }
         
-        buttons_rect.y += buttons_rect.height + button_spacing;
+        GuiSetStyle(DEFAULT, TEXT_SIZE, 40);
+        primary_buttons_rect.y += primary_buttons_rect.height + button_spacing;
+        secondary_buttons_rect.y += primary_buttons_rect.height + button_spacing;
         auto& settings_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(MainMenuButtonType::Settings));
-        if (renderer_ui_button(buttons_rect, "SETTINGS", settings_hover, audio_state, settings_hover))
+        if (renderer_ui_button(secondary_buttons_rect, "SETTINGS", settings_hover, audio_state, settings_hover))
         {
             audio_play_sound_randomize_pitch(audio_state, AudioType::UIButtonClick);
             audio_play_sound_randomize_pitch(audio_state, AudioType::UIPageChange);
             menu_state = menu_init(MenuPageType::Settings);
         }
         
-        buttons_rect.y += buttons_rect.height + button_spacing;
+        secondary_buttons_rect.y += secondary_buttons_rect.height + button_spacing;
         auto& credits_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(MainMenuButtonType::Credits));
-        if (renderer_ui_button(buttons_rect, "CREDITS", credits_hover, audio_state, credits_hover))
+        if (renderer_ui_button(secondary_buttons_rect, "CREDITS", credits_hover, audio_state, credits_hover))
         {
             audio_play_sound_randomize_pitch(audio_state, AudioType::UIButtonClick);
             audio_play_sound_randomize_pitch(audio_state, AudioType::UIPageChange);
             menu_state = menu_init(MenuPageType::Credits);
         }
         
-        buttons_rect.y += buttons_rect.height + button_spacing;
+        secondary_buttons_rect.y += secondary_buttons_rect.height + button_spacing;
         auto& quit_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(MainMenuButtonType::Quit));
-        if (renderer_ui_button(buttons_rect, "QUIT", quit_hover, audio_state, quit_hover))
+        if (renderer_ui_button(secondary_buttons_rect, "QUIT", quit_hover, audio_state, quit_hover))
         {
             audio_play_sound_randomize_pitch(audio_state, AudioType::UIButtonClick);
             audio_play_sound_randomize_pitch(audio_state, AudioType::UIPageChange);
@@ -478,7 +492,7 @@ namespace woc
 
     void renderer_update_and_render_settings(Renderer& renderer, MenuState& menu_state, AudioState& audio_state, Vector2 framebuffer_size)
     {
-        auto button_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.5f}, Vector2 { 200.f, 50.f }, Vector2{0.5f, 0.0f});
+        auto button_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.5f}, Vector2 { 300.f, 50.f }, Vector2{0.5f, 0.0f});
         if (GuiButton(button_rect, "BACK"))
         {
             audio_play_sound(audio_state, AudioType::UIButtonClick);
@@ -489,7 +503,7 @@ namespace woc
     
     void renderer_update_and_render_credits(Renderer& renderer, MenuState& menu_state, AudioState& audio_state, Vector2 framebuffer_size)
     {
-        auto button_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.5f}, Vector2 { 200.f, 50.f }, Vector2{0.5f, 0.0f});
+        auto button_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.5f}, Vector2 { 300.f, 50.f }, Vector2{0.5f, 0.0f});
         if (GuiButton(button_rect, "BACK"))
         {
             audio_play_sound(audio_state, AudioType::UIButtonClick);
@@ -627,7 +641,7 @@ namespace woc
         i32 fbx = static_cast<i32>(framebuffer_size.x);
         i32 fby = static_cast<i32>(framebuffer_size.y);
         DrawRectangle(0, 0, fbx, fby, Color{0, 0, 0, static_cast<u8>(Lerp(225.f, 0.f, game_state.time_scale * game_state.time_scale))});
-        auto buttons_rect = ui_rectangle_from_anchor(framebuffer_size, { 0.5, 0.5 }, { 200.f, 50.f});
+        auto buttons_rect = ui_rectangle_from_anchor(framebuffer_size, { 0.5, 0.5 }, { 300.f, 50.f});
         if (GuiButton(buttons_rect, "NEXT LEVEL"))
         {
             game_state = game_init(game_state.current_level+1);
@@ -639,7 +653,7 @@ namespace woc
         i32 fbx = static_cast<i32>(framebuffer_size.x);
         i32 fby = static_cast<i32>(framebuffer_size.y);
         DrawRectangle(0, 0, fbx, fby, Color{0, 0, 0, static_cast<u8>(Lerp(225.f, 0.f, game_state.time_scale * game_state.time_scale))});
-        auto buttons_rect = ui_rectangle_from_anchor(framebuffer_size, { 0.5, 0.5 }, { 200.f, 50.f});
+        auto buttons_rect = ui_rectangle_from_anchor(framebuffer_size, { 0.5, 0.5 }, { 300.f, 50.f});
         if (GuiButton(buttons_rect, "TRY AGAIN"))
         {
             game_state = game_init(game_state.current_level);
@@ -651,7 +665,7 @@ namespace woc
         i32 fbx = static_cast<i32>(framebuffer_size.x);
         i32 fby = static_cast<i32>(framebuffer_size.y);
         DrawRectangle(0, 0, fbx, fby, Color{0, 0, 0, static_cast<u8>(Lerp(225.f, 0.f, game_state->time_scale * game_state->time_scale))});
-        auto buttons_rect = ui_rectangle_from_anchor(framebuffer_size, { 0.5, 0.5 }, { 200.f, 50.f});
+        auto buttons_rect = ui_rectangle_from_anchor(framebuffer_size, { 0.5, 0.5 }, { 300.f, 50.f});
         if (GuiButton(buttons_rect, "MAIN MENU"))
         {
             menu_state.current_page = MenuPageType::MainMenu;
