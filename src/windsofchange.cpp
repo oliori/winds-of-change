@@ -154,6 +154,36 @@ namespace woc
                 game_state.player.wind_available = 1;
                 break;
             }
+            case 5:
+            {
+                enemies.emplace_back(EnemyState {
+                    .pos = Vector2 { WORLD_MAX.x - WALL_SIZE_DEFAULT.x, 0.f },
+                    .size = WALL_SIZE_DEFAULT,
+                    .health = 1,
+                    .rot = Radian { PI / 2.f },
+                    .type = EnemyType::Normal,
+                    .contributes_to_win = true
+                });
+                enemies.emplace_back(EnemyState {
+                    .pos = Vector2 { WORLD_MIN.x + WALL_SIZE_DEFAULT.x, 0.f },
+                    .size = WALL_SIZE_DEFAULT,
+                    .health = 2,
+                    .rot = Radian { PI / 2.f },
+                    .type = EnemyType::Normal,
+                    .contributes_to_win = true
+                });
+                enemies.emplace_back(EnemyState {
+                    .pos = Vector2 { 0.f, WORLD_MIN.y + WALL_SIZE_DEFAULT.y },
+                    .size = WALL_SIZE_DEFAULT,
+                    .health = 1,
+                    .rot = Radian { 0.f },
+                    .type = EnemyType::Normal,
+                    .contributes_to_win = true
+                });
+                game_state.player.balls_available = 1;
+                game_state.player.wind_available = 2;
+                break;
+            }
             default:
             {
                 break;
@@ -427,7 +457,7 @@ namespace woc
             game_state.player.balls_available--;
         }
 
-        if (!game_state.player.active_wind_ability && game_state.player.wind_available)
+        if (!game_state.player.active_wind_ability && game_state.player.wind_available && !game_state.player_projectiles.empty())
         {
             if (input.wind_dir_x) {
                 audio_play_sound_randomize_pitch(audio_state, AudioType::SFXWind);
@@ -471,7 +501,7 @@ namespace woc
             }
 
             wind->timer -= wind_delta;
-            if (wind->timer < 0.f)
+            if (wind->timer <= 0.f)
             {
                 wind = std::nullopt;
             } 
@@ -819,14 +849,14 @@ namespace woc
         for (u32 i = 0; i < game_state.player.balls_available; i++)
         {
             DrawTextureNPatch(texture_from_type(renderer, TextureType::KeySpace), patch_info, balls_rect, Vector2Zero(), 0.f, BALL_COLOR);
-            balls_rect.y += ICON_SPACING + ICON_SIZE;
+            balls_rect.y -= ICON_SPACING + ICON_SIZE;
         }
         
         //wind_rect.y += WIND_AVAILABLE_SPACING;
         for (u32 i = 0; i < game_state.player.wind_available; i++)
         {
             DrawTextureNPatch(texture_from_type(renderer, TextureType::KeyUp), patch_info, wind_rect, Vector2Zero(), 0.f, WHITE);
-            wind_rect.y += ICON_SPACING + ICON_SIZE;
+            wind_rect.y -= ICON_SPACING + ICON_SIZE;
         }
 
         auto tutorial_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2 { 0.0, 1.0f }, Vector2 { ICON_SIZE, ICON_SIZE }, Vector2 { 0.0, 1.0f });

@@ -24,9 +24,20 @@ int main()
     auto update_app = [&window = window, &keep_running_app, &is_window_visible, &window_size, &app_input_state] ()
     {
         PollInputEvents();
-        
-        app_input_state.game_menu_swap += IsKeyPressed(KEY_ESCAPE);
-        app_input_state.new_game += IsKeyPressed(KEY_Y);
+
+        // IsKeyPressed seems unrealiable. Temporary fix. 
+        woc_local bool was_send_ball = false;
+        woc_local bool was_menu_swap = false;
+        woc_local bool was_new_game = false;
+        auto game_menu_swap = IsKeyDown(KEY_ESCAPE);
+        auto new_game = IsKeyDown(KEY_Y);
+        auto send_ball = IsKeyDown(KEY_SPACE);
+        app_input_state.game_menu_swap += game_menu_swap && game_menu_swap != was_menu_swap;
+        app_input_state.new_game += new_game && new_game != was_new_game;
+        app_input_state.send_ball += send_ball && send_ball != was_send_ball;
+        was_menu_swap = game_menu_swap;
+        was_new_game = new_game;
+        was_send_ball = send_ball;
         
         auto move_left = IsKeyDown(KEY_A);
         auto move_right = IsKeyDown(KEY_D);
@@ -38,8 +49,6 @@ int main()
         auto wind_right = IsKeyDown(KEY_RIGHT);
         app_input_state.wind_dir_x = static_cast<woc::i32>(wind_right) - static_cast<woc::i32>(wind_left);
         app_input_state.wind_dir_y = static_cast<woc::i32>(wind_up) - static_cast<woc::i32>(wind_down);
-        
-        app_input_state.send_ball += IsKeyPressed(KEY_SPACE);
 
         is_window_visible = woc::window_is_visible(window);
         window_size = woc::window_size(window);
