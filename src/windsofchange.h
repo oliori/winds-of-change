@@ -35,7 +35,7 @@ namespace woc
     using f64 = double;
     
     constexpr f32 WIND_DURATION = 0.75f;
-    constexpr u32 START_LEVEL = 0;
+    constexpr u32 START_LEVEL = 2;
     constexpr u32 END_LEVEL = 5;
     constexpr Vector2 WORLD_MIN = Vector2{ -700, -500 };
     constexpr Vector2 WORLD_MAX = Vector2{ 700, 500 };
@@ -45,7 +45,7 @@ namespace woc
     constexpr f32 BALL_DEFAULT_VELOCITY = 300.f;
     constexpr f32 BALL_DEFAULT_RADIUS = 10.f;
     constexpr f32 BALL_DEFAULT_Y_OFFSET = 25.f;
-    constexpr f32 MIN_TIME_BETWEEN_COLLISIONS = 0.25f;
+    constexpr f32 MIN_TIME_BETWEEN_COLLISIONS = 0.10f;
     
     constexpr Vector2 WALL_SIZE_S = Vector2{ 100, 25 };
     constexpr Vector2 WALL_SIZE_DEFAULT = Vector2{ 200, 25 };
