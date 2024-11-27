@@ -161,9 +161,34 @@ namespace woc
                     .type = EnemyType::Indestructible,
                     .contributes_to_win = false
                 });
-                    
+
+                auto center = WORLD_MIN.x + WALL_SIZE_XL.x;
                 enemies.emplace_back(EnemyState {
-                    .pos = Vector2 { WORLD_MIN.x + WALL_SIZE_XL.x * 1.0f + WALL_SIZE_DEFAULT.x * 0.5f + 200.f, -400.f },
+                    .pos = Vector2 { center + -0.5f * WALL_SIZE_DEFAULT.x, 0.f },
+                    .size = WALL_SIZE_DEFAULT,
+                    .health = 1,
+                    .rot = Radian { 0.f },
+                    .type = EnemyType::Normal,
+                    .contributes_to_win = true
+                });
+                enemies.emplace_back(EnemyState {
+                    .pos = Vector2 { center + -2.5f * WALL_SIZE_DEFAULT.x, -100.f },
+                    .size = WALL_SIZE_DEFAULT,
+                    .health = 1,
+                    .rot = Radian { 0.f },
+                    .type = EnemyType::Normal,
+                    .contributes_to_win = true
+                });
+                enemies.emplace_back(EnemyState {
+                    .pos = Vector2 { center + 0.5f * WALL_SIZE_DEFAULT.x + 50, 0.f },
+                    .size = WALL_SIZE_DEFAULT,
+                    .health = 1,
+                    .rot = Radian { 0.f },
+                    .type = EnemyType::Normal,
+                    .contributes_to_win = true
+                });
+                enemies.emplace_back(EnemyState {
+                    .pos = Vector2 { center + 2.5f * WALL_SIZE_DEFAULT.x + 50, -100.f },
                     .size = WALL_SIZE_DEFAULT,
                     .health = 1,
                     .rot = Radian { 0.f },
