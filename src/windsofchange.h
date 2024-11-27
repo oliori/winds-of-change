@@ -65,6 +65,7 @@ namespace woc
     constexpr Color PLAYER_COLOR = Color { 0x75, 0x9B, 0x97, 0xFF };
     constexpr Color INDESTRUCTIBLE_WALL_COLOR = Color { 0x9E, 0x76, 0x76, 0xFF };
     constexpr Color WALL_COLOR = Color { 0x4F, 0x4D, 0x70, 0xFF };
+    constexpr Color WIND_COLOR = BALL_COLOR;
     
     struct Radian {
         f32 val;

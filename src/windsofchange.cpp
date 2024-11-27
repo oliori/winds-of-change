@@ -649,6 +649,9 @@ namespace woc
         texture_from_type(result, TextureType::KeyLeft) = LoadTexture("assets/textures/left_key.png");
         texture_from_type(result, TextureType::KeyRight) = LoadTexture("assets/textures/right_key.png");
         
+        texture_from_type(result, TextureType::IconBall) = LoadTexture("assets/textures/ball.png");
+        texture_from_type(result, TextureType::IconWind) = LoadTexture("assets/textures/wind.png");
+        
         GuiSetStyle(DEFAULT, TEXT_SIZE, 30);
 
         return result;
@@ -942,6 +945,32 @@ namespace woc
 
         EndMode2D();
 
+        auto balls_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2 { 1.0, 1.0f }, Vector2 { ICON_SIZE, ICON_SIZE }, Vector2 { 1.0, 1.0f });
+        balls_rect.y -= ICON_SPACING / 2.f;
+        auto wind_rect = balls_rect;
+        wind_rect.x -= ICON_SPACING + ICON_SIZE;
+        
+        auto big_patch_info = NPatchInfo {
+            .source = Rectangle { .x = 0, .y = 0, .width = 100, .height = 100  },
+            .left = 0,
+            .top = 0,
+            .right = 0,
+            .bottom = 0,
+            .layout = 0
+        };
+        for (u32 i = 0; i < game_state.player.balls_available; i++)
+        {
+            DrawTextureNPatch(texture_from_type(renderer, TextureType::IconBall), big_patch_info, balls_rect, Vector2Zero(), 0.f, BALL_COLOR);
+            balls_rect.y -= ICON_SPACING + ICON_SIZE;
+        }
+        
+        //wind_rect.y += WIND_AVAILABLE_SPACING;
+        for (u32 i = 0; i < game_state.player.wind_available; i++)
+        {
+            DrawTextureNPatch(texture_from_type(renderer, TextureType::IconWind), big_patch_info, wind_rect, Vector2Zero(), 0.f, WIND_COLOR);
+            wind_rect.y -= ICON_SPACING + ICON_SIZE;
+        }
+
         auto patch_info = NPatchInfo {
             .source = Rectangle { .x = 0, .y = 0, .width = 16, .height = 16  },
             .left = 0,
@@ -950,23 +979,6 @@ namespace woc
             .bottom = 0,
             .layout = 0
         };
-        auto balls_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2 { 1.0, 1.0f }, Vector2 { ICON_SIZE, ICON_SIZE }, Vector2 { 1.0, 1.0f });
-        auto wind_rect = balls_rect;
-        wind_rect.x -= ICON_SPACING + ICON_SIZE;
-        
-        for (u32 i = 0; i < game_state.player.balls_available; i++)
-        {
-            DrawTextureNPatch(texture_from_type(renderer, TextureType::KeySpace), patch_info, balls_rect, Vector2Zero(), 0.f, BALL_COLOR);
-            balls_rect.y -= ICON_SPACING + ICON_SIZE;
-        }
-        
-        //wind_rect.y += WIND_AVAILABLE_SPACING;
-        for (u32 i = 0; i < game_state.player.wind_available; i++)
-        {
-            DrawTextureNPatch(texture_from_type(renderer, TextureType::KeyUp), patch_info, wind_rect, Vector2Zero(), 0.f, WHITE);
-            wind_rect.y -= ICON_SPACING + ICON_SIZE;
-        }
-
         auto tutorial_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2 { 0.0, 1.0f }, Vector2 { ICON_SIZE, ICON_SIZE }, Vector2 { 0.0, 1.0f });
         constexpr i32 TUTORIAL_SMALL_MARGIN = 10;
         constexpr i32 TUTORIAL_BIG_MARGIN = 40;
