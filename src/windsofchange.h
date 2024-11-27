@@ -193,7 +193,6 @@ namespace woc
     
     enum class ResolutionPreset
     {
-        Resolution_1280x720,
         Resolution_1600x900,
         Resolution_1920x1080,
         MAX

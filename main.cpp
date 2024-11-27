@@ -3,8 +3,8 @@
 
 // TODO:
 // - SFX: Send ball, Use wind, Ball disappear, Level lost, Level won, Wall disappear, Game won
-// - Polish: Tweak ball movement speed, Add more levels, Support 1280x720 
-// - Fix: Weird collision with ball, input issue
+// - Polish: Tweak ball movement speed, Add more levels
+// - Fix: input issue
 // - Extra: Add moving walls
 // - Test on other PC
 

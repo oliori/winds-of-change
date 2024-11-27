@@ -575,7 +575,7 @@ namespace woc
         i32 current_res = static_cast<i32>(menu_state.resolution);
         GuiSetStyle(DEFAULT, TEXT_SIZE, 20);
         button_rect.width /= static_cast<f32>(static_cast<u32>(ResolutionPreset::MAX));
-        constexpr auto RESOLUTION_TEXT = "1280x720;1600x900;1920x1080";
+        constexpr auto RESOLUTION_TEXT = "1600x900;1920x1080";
         GuiToggleGroup(button_rect, RESOLUTION_TEXT, &current_res);
         menu_state.resolution = static_cast<ResolutionPreset>(current_res);
         assert(menu_state.resolution < ResolutionPreset::MAX);
@@ -885,8 +885,6 @@ namespace woc
     {
         switch (resolution)
         {
-        case ResolutionPreset::Resolution_1280x720:
-            return Vector2 { 1280, 720 };
         case ResolutionPreset::Resolution_1600x900:
             return Vector2 { 1600, 900 };
         case ResolutionPreset::Resolution_1920x1080:
@@ -902,8 +900,6 @@ namespace woc
     {
         switch (resolution)
         {
-        case ResolutionPreset::Resolution_1280x720:
-            return "1280x720";
         case ResolutionPreset::Resolution_1600x900:
             return "1600x900";
         case ResolutionPreset::Resolution_1920x1080:
