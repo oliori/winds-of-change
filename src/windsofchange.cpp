@@ -36,6 +36,7 @@ namespace woc
     woc_internal void game_load_level(GameState& game_state)
     {
         auto& enemies = game_state.enemies;
+        auto world_size = Vector2Subtract(WORLD_MAX, WORLD_MIN);
         switch (game_state.current_level)
         {
             case 0:
@@ -145,6 +146,38 @@ namespace woc
             case 4:
             {
                 enemies.emplace_back(EnemyState {
+                    .pos = Vector2 { WORLD_MIN.x + WALL_SIZE_XL.x * 0.5f, 200.f },
+                    .size = WALL_SIZE_XL,
+                    .health = 1,
+                    .rot = Radian { 0.f },
+                    .type = EnemyType::Indestructible,
+                    .contributes_to_win = false
+                });
+                enemies.emplace_back(EnemyState {
+                    .pos = Vector2 { WORLD_MIN.x + WALL_SIZE_XL.x * 1.5f + 50.f, 200.f },
+                    .size = WALL_SIZE_XL,
+                    .health = 1,
+                    .rot = Radian { 0.f },
+                    .type = EnemyType::Indestructible,
+                    .contributes_to_win = false
+                });
+                    
+                enemies.emplace_back(EnemyState {
+                    .pos = Vector2 { WORLD_MIN.x + WALL_SIZE_XL.x * 1.0f + WALL_SIZE_DEFAULT.x * 0.5f + 200.f, -400.f },
+                    .size = WALL_SIZE_DEFAULT,
+                    .health = 1,
+                    .rot = Radian { 0.f },
+                    .type = EnemyType::Normal,
+                    .contributes_to_win = true
+                });
+                    
+                game_state.player.balls_available = 2;
+                game_state.player.wind_available = 2;
+                break;
+            }
+            case 5:
+            {
+                enemies.emplace_back(EnemyState {
                     .pos = Vector2 { WORLD_MAX.x - WALL_SIZE_DEFAULT.x, 0.f },
                     .size = WALL_SIZE_DEFAULT,
                     .health = 1,
@@ -164,7 +197,7 @@ namespace woc
                 game_state.player.wind_available = 1;
                 break;
             }
-            case 5:
+            case 6:
             {
                 enemies.emplace_back(EnemyState {
                     .pos = Vector2 { WORLD_MAX.x - WALL_SIZE_DEFAULT.x, 0.f },
@@ -202,7 +235,7 @@ namespace woc
                 game_state.player.wind_available = 1;
                 break;
             }
-            case 6:
+            case 7:
             {
                 enemies.emplace_back(EnemyState {
                     .pos = Vector2 { WORLD_MAX.x - WALL_SIZE_DEFAULT.x, 0.f },
@@ -494,7 +527,8 @@ namespace woc
             return false;
         });
 
-        if (input.send_ball & game_state.player.balls_available)
+        game_state.player.ball_cd = std::max(0.f, game_state.player.ball_cd - delta_seconds);
+        if (input.send_ball && game_state.player.balls_available && game_state.player.ball_cd <= 0.f)
         {
             audio_play_sound_randomize_pitch(audio_state, AudioType::SFXSendBall);
             game_state.player_projectiles.emplace_back(Projectile {
@@ -503,6 +537,7 @@ namespace woc
                 .time_since_last_collision = 0.f
             });
             game_state.player.balls_available--;
+            game_state.player.ball_cd = BALL_DEFAULT_CD;
         }
 
         if (!game_state.player.active_wind_ability && game_state.player.wind_available && !game_state.player_projectiles.empty())

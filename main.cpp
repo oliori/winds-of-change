@@ -25,19 +25,9 @@ int main()
     {
         PollInputEvents();
 
-        // IsKeyPressed seems unrealiable. Temporary fix. 
-        woc_local bool was_send_ball = false;
-        woc_local bool was_menu_swap = false;
-        woc_local bool was_new_game = false;
-        auto game_menu_swap = IsKeyDown(KEY_ESCAPE);
-        auto new_game = IsKeyDown(KEY_Y);
-        auto send_ball = IsKeyDown(KEY_SPACE);
-        app_input_state.game_menu_swap += game_menu_swap && game_menu_swap != was_menu_swap;
-        app_input_state.new_game += new_game && new_game != was_new_game;
-        app_input_state.send_ball += send_ball && send_ball != was_send_ball;
-        was_menu_swap = game_menu_swap;
-        was_new_game = new_game;
-        was_send_ball = send_ball;
+        app_input_state.game_menu_swap += IsKeyPressed(KEY_ESCAPE);
+        app_input_state.new_game += IsKeyPressed(KEY_Y);
+        app_input_state.send_ball += IsKeyDown(KEY_SPACE);
         
         auto move_left = IsKeyDown(KEY_A);
         auto move_right = IsKeyDown(KEY_D);

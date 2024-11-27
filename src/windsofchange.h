@@ -35,13 +35,14 @@ namespace woc
     using f64 = double;
     
     constexpr f32 WIND_DURATION = 0.75f;
-    constexpr u32 START_LEVEL = 3;
+    constexpr u32 START_LEVEL = 4;
     constexpr u32 END_LEVEL = 5;
     constexpr Vector2 WORLD_MIN = Vector2{ -700, -500 };
     constexpr Vector2 WORLD_MAX = Vector2{ 700, 500 };
     constexpr f32 PLAYER_WORLD_Y = 400.f;
     constexpr i32 PLAYER_DEFAULT_WIDTH = 100;
     constexpr i32 PLAYER_DEFAULT_HEIGHT = 25;
+    constexpr f32 BALL_DEFAULT_CD = 0.50f;
     constexpr f32 BALL_DEFAULT_VELOCITY = 300.f;
     constexpr f32 BALL_DEFAULT_RADIUS = 10.f;
     constexpr f32 BALL_DEFAULT_Y_OFFSET = 25.f;
@@ -125,6 +126,7 @@ namespace woc
         f32 accel;
         f32 ball_velocity = BALL_DEFAULT_VELOCITY;
         u32 balls_available;
+        f32 ball_cd;
         u32 wind_available;
         std::optional<WindAbility> active_wind_ability;
     };
