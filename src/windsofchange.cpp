@@ -941,20 +941,20 @@ namespace woc
         };
         result.sounds.at(static_cast<size_t>(AudioType::MusicBackground)) = LoadSound("assets/audio/cozy.ogg");
         
-        result.sounds.at(static_cast<size_t>(AudioType::SFXIndestructibleImpact)) = LoadSound("assets/audio/temp/impactTin_medium_004.ogg");
-        result.sounds.at(static_cast<size_t>(AudioType::SFXWallImpact)) = LoadSound("assets/audio/temp/impactGlass_medium_004.ogg");
+        result.sounds.at(static_cast<size_t>(AudioType::SFXIndestructibleImpact)) = LoadSound("assets/audio/impactTin_medium_004.ogg");
+        result.sounds.at(static_cast<size_t>(AudioType::SFXWallImpact)) = LoadSound("assets/audio/impactGlass_medium_004.ogg");
         
-        result.sounds.at(static_cast<size_t>(AudioType::SFXSendBall)) = LoadSound("assets/audio/temp/phaserUp3.ogg");
-        result.sounds.at(static_cast<size_t>(AudioType::SFXWind)) = LoadSound("assets/audio/temp/phaseJump3.ogg");
-        result.sounds.at(static_cast<size_t>(AudioType::SFXBallDisappear)) = LoadSound("assets/audio/temp/phaserDown3.ogg");
-        result.sounds.at(static_cast<size_t>(AudioType::SFXWallDisappear)) = LoadSound("assets/audio/temp/pepSound5.ogg");
+        result.sounds.at(static_cast<size_t>(AudioType::SFXSendBall)) = LoadSound("assets/audio/phaserUp3.ogg");
+        result.sounds.at(static_cast<size_t>(AudioType::SFXWind)) = LoadSound("assets/audio/phaseJump3.ogg");
+        result.sounds.at(static_cast<size_t>(AudioType::SFXBallDisappear)) = LoadSound("assets/audio/phaserDown3.ogg");
+        result.sounds.at(static_cast<size_t>(AudioType::SFXWallDisappear)) = LoadSound("assets/audio/pepSound5.ogg");
         
-        result.sounds.at(static_cast<size_t>(AudioType::SFXLevelLost)) = LoadSound("assets/audio/temp/error_003.ogg");
-        result.sounds.at(static_cast<size_t>(AudioType::SFXLevelWon)) = LoadSound("assets/audio/temp/confirmation_003.ogg");
+        result.sounds.at(static_cast<size_t>(AudioType::SFXLevelLost)) = LoadSound("assets/audio/error_003.ogg");
+        result.sounds.at(static_cast<size_t>(AudioType::SFXLevelWon)) = LoadSound("assets/audio/confirmation_003.ogg");
         
-        result.sounds.at(static_cast<size_t>(AudioType::UIPageChange)) = LoadSound("assets/audio/temp/card-slide-6.ogg");
-        result.sounds.at(static_cast<size_t>(AudioType::UIButtonHover)) = LoadSound("assets/audio/temp/chips-handle-3.ogg");
-        result.sounds.at(static_cast<size_t>(AudioType::UIButtonClick)) = LoadSound("assets/audio/temp/die-throw-1.ogg");
+        result.sounds.at(static_cast<size_t>(AudioType::UIPageChange)) = LoadSound("assets/audio/card-slide-6.ogg");
+        result.sounds.at(static_cast<size_t>(AudioType::UIButtonHover)) = LoadSound("assets/audio/chips-handle-3.ogg");
+        result.sounds.at(static_cast<size_t>(AudioType::UIButtonClick)) = LoadSound("assets/audio/die-throw-1.ogg");
 
         return result;
     }
