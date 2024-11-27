@@ -97,6 +97,54 @@ namespace woc
             case 3:
             {
                 enemies.emplace_back(EnemyState {
+                    .pos = Vector2 { WORLD_MIN.x + WALL_SIZE_XL.x * 0.5f, 200.f },
+                    .size = WALL_SIZE_XL,
+                    .health = 1,
+                    .rot = Radian { 0.f },
+                    .type = EnemyType::Indestructible,
+                    .contributes_to_win = false
+                });
+                enemies.emplace_back(EnemyState {
+                    .pos = Vector2 { WORLD_MIN.x + WALL_SIZE_XL.x * 1.5f + 50.f, 200.f },
+                    .size = WALL_SIZE_XL,
+                    .health = 1,
+                    .rot = Radian { 0.f },
+                    .type = EnemyType::Indestructible,
+                    .contributes_to_win = false
+                });
+                    
+                enemies.emplace_back(EnemyState {
+                    .pos = Vector2 { WORLD_MIN.x + WALL_SIZE_XL.x * 0.5f + 200.f, -200.f },
+                    .size = WALL_SIZE_XL,
+                    .health = 1,
+                    .rot = Radian { 0.f },
+                    .type = EnemyType::Indestructible,
+                    .contributes_to_win = false
+                });
+                enemies.emplace_back(EnemyState {
+                    .pos = Vector2 { WORLD_MIN.x + WALL_SIZE_XL.x * 1.5f + 250.f, -200.f },
+                    .size = WALL_SIZE_XL,
+                    .health = 1,
+                    .rot = Radian { 0.f },
+                    .type = EnemyType::Indestructible,
+                    .contributes_to_win = false
+                });
+                    
+                enemies.emplace_back(EnemyState {
+                    .pos = Vector2 { WORLD_MIN.x + WALL_SIZE_XL.x * 1.0f + WALL_SIZE_DEFAULT.x * 0.5f + 200.f, -400.f },
+                    .size = WALL_SIZE_DEFAULT,
+                    .health = 1,
+                    .rot = Radian { 0.f },
+                    .type = EnemyType::Normal,
+                    .contributes_to_win = true
+                });
+                game_state.player.balls_available = 1;
+                game_state.player.wind_available = 2;
+                break;
+            }
+            case 4:
+            {
+                enemies.emplace_back(EnemyState {
                     .pos = Vector2 { WORLD_MAX.x - WALL_SIZE_DEFAULT.x, 0.f },
                     .size = WALL_SIZE_DEFAULT,
                     .health = 1,
@@ -116,7 +164,7 @@ namespace woc
                 game_state.player.wind_available = 1;
                 break;
             }
-            case 4:
+            case 5:
             {
                 enemies.emplace_back(EnemyState {
                     .pos = Vector2 { WORLD_MAX.x - WALL_SIZE_DEFAULT.x, 0.f },
@@ -154,7 +202,7 @@ namespace woc
                 game_state.player.wind_available = 1;
                 break;
             }
-            case 5:
+            case 6:
             {
                 enemies.emplace_back(EnemyState {
                     .pos = Vector2 { WORLD_MAX.x - WALL_SIZE_DEFAULT.x, 0.f },
