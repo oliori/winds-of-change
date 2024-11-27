@@ -36,7 +36,7 @@ namespace woc
     
     constexpr f32 WIND_DURATION = 0.75f;
     constexpr u32 START_LEVEL = 0;
-    constexpr u32 END_LEVEL = 1;
+    constexpr u32 END_LEVEL = 2;
     constexpr Vector2 WORLD_MIN = Vector2{ -700, -500 };
     constexpr Vector2 WORLD_MAX = Vector2{ 700, 500 };
     constexpr f32 PLAYER_WORLD_Y = 400.f;
@@ -47,6 +47,8 @@ namespace woc
     constexpr f32 BALL_DEFAULT_Y_OFFSET = 25.f;
     
     constexpr f32 ENEMY_DEAD_EFFECT_DURATION = 0.5f;
+    
+    constexpr f32 ICON_SIZE = 45.f;
 
     constexpr Color BACKGROUND_COLOR = Color { 0xE3, 0xCB, 0xAF, 0xFF };
     constexpr Color BALL_COLOR = Color { 0x52, 0x82, 0x7D, 0xFF };
@@ -209,10 +211,26 @@ namespace woc
         std::array<bool, MAX_BUTTONS_PER_PAGE> buttons_hover_state;
     };
     MenuState menu_init(MenuPageType page);
-    
-    struct Renderer {
+
+    enum class TextureType
+    {
+        KeyA,
+        KeyD,
+        KeyEsc,
+        KeySpace,
+        KeyLeft,
+        KeyRight,
+        KeyUp,
+        KeyDown,
+        IconBall,
+        IconWind,
+        MAX
     };
-    
+    struct Renderer {
+        std::array<Texture2D, static_cast<size_t>(TextureType::MAX)> loaded_textures;
+    };
+    Renderer renderer_init();
+    void renderer_deinit(Renderer& renderer);
     void renderer_finalize_rendering(Renderer& renderer);
     void renderer_prepare_rendering(Renderer& renderer);
     void renderer_update_and_render_menu(Renderer& renderer, MenuState& menu_state, std::optional<GameState>& game_state, AudioState& audio_state, Vector2 framebuffer_size);

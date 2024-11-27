@@ -43,6 +43,18 @@ namespace woc
             case 0:
             {
                 enemies.emplace_back(EnemyState {
+                    .pos = Vector2 { 0.f, 0.f },
+                    .size = Vector2 { 100.f, 25.f },
+                    .health = 3,
+                    .type = EnemyType::Normal,
+                    .contributes_to_win = true
+                });
+                game_state.player.balls_available = 1;
+                break;
+            }
+            case 1:
+            {
+                enemies.emplace_back(EnemyState {
                     .pos = Vector2 { -200.f, -300.f },
                     .size = Vector2 { 100.f, 25.f },
                     .health = 1,
@@ -59,7 +71,7 @@ namespace woc
                 game_state.player.balls_available = 1;
                 break;
             }
-            case 1:
+            case 2:
             {
                 enemies.emplace_back(EnemyState {
                     .pos = Vector2 { -200.f, -300.f },
@@ -338,6 +350,37 @@ namespace woc
         }
     }
     
+    woc_internal Texture2D& texture_from_type(Renderer& r, TextureType t)
+    {
+        return r.loaded_textures.at(static_cast<size_t>(t));
+    }
+    
+    Renderer renderer_init()
+    {
+        auto result = Renderer {
+            .loaded_textures{}
+        };
+
+        texture_from_type(result, TextureType::KeyA) = LoadTexture("assets/textures/a_key.png");
+        texture_from_type(result, TextureType::KeyD) = LoadTexture("assets/textures/d_key.png");
+        texture_from_type(result, TextureType::KeyEsc) = LoadTexture("assets/textures/esc_key.png");
+        texture_from_type(result, TextureType::KeySpace) = LoadTexture("assets/textures/space_key.png");
+        texture_from_type(result, TextureType::KeyUp) = LoadTexture("assets/textures/up_key.png");
+        texture_from_type(result, TextureType::KeyDown) = LoadTexture("assets/textures/down_key.png");
+        texture_from_type(result, TextureType::KeyLeft) = LoadTexture("assets/textures/left_key.png");
+        texture_from_type(result, TextureType::KeyRight) = LoadTexture("assets/textures/right_key.png");
+
+        return result;
+    }
+
+    void renderer_deinit(Renderer& renderer)
+    {
+        for (auto& tex : renderer.loaded_textures)
+        {
+            UnloadTexture(tex);
+        }
+    }
+    
     woc_internal bool renderer_ui_button(
         Rectangle bounds, std::string_view text, bool already_hovered,
         AudioState& audio_state,
@@ -449,9 +492,6 @@ namespace woc
             .zoom = (framebuffer_size.y / cam.height) * cam.zoom
         });
 
-        //auto diff = Vector2Subtract(WORLD_MAX, WORLD_MIN);
-        //DrawRectangle(static_cast<i32>(WORLD_MIN.x), static_cast<i32>(WORLD_MIN.y), static_cast<i32>(diff.x), static_cast<i32>(diff.y), LIGHTGRAY);
-
         auto player_half_size = Vector2Scale(player_size(), 0.5f);
         auto player_rect = Rectangle { player.pos_x - player_half_size.x, PLAYER_WORLD_Y - player_half_size.y, PLAYER_DEFAULT_WIDTH, PLAYER_DEFAULT_HEIGHT };
         DrawRectanglePro(player_rect, Vector2Zero(), 0.f, PLAYER_COLOR);
@@ -465,7 +505,7 @@ namespace woc
             {
                 case EnemyType::Indestructible: {
                     DrawRectanglePro(e_rect, Vector2Zero(), 0.f, INDESTRUCTIBLE_WALL_COLOR);
-                    DrawRectangleLinesEx(e_rect, 1.0f, BLACK);
+                    DrawRectangleLinesEx(e_rect, 2.0f, BLACK);
                     break;
                 }
                 case EnemyType::Normal: {
@@ -473,9 +513,11 @@ namespace woc
                     auto health_rect = e_rect;
                     for (auto i = 0; i < e.health; i++)
                     {
-                        DrawRectangleLinesEx(health_rect, 1.0f, WHITE);
-                        health_rect.height += 2;
-                        health_rect.width += 2;
+                        DrawRectangleLinesEx(health_rect, 2.0f, WHITE);
+                        health_rect.x -= 3;
+                        health_rect.y -= 3;
+                        health_rect.height += 6;
+                        health_rect.width += 6;
                     }
                     break;
                 }
@@ -504,28 +546,53 @@ namespace woc
 
         EndMode2D();
 
-        i32 fbx = static_cast<i32>(framebuffer_size.x);
-        i32 fby = static_cast<i32>(framebuffer_size.y);
+        auto patch_info = NPatchInfo {
+            .source = Rectangle { .x = 0, .y = 0, .width = 16, .height = 16  },
+            .left = 0,
+            .top = 0,
+            .right = 0,
+            .bottom = 0,
+            .layout = 0
+        };
+        constexpr f32 ICON_SPACING = 20.f;
+        auto balls_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2 { 1.0, 1.0f }, Vector2 { ICON_SIZE, ICON_SIZE }, Vector2 { 1.0, 1.0f });
+        auto wind_rect = balls_rect;
+        wind_rect.x -= ICON_SPACING + ICON_SIZE;
         
-        i32 balls_available_spacing = 20;
-        i32 balls_available_size = 30;
-        i32 balls_available_pos_x = fbx - balls_available_spacing - balls_available_size;
-        i32 balls_available_pos_y = fby - balls_available_spacing - balls_available_size;
         for (u32 i = 0; i < game_state.player.balls_available; i++)
         {
-            DrawCircle(balls_available_pos_x, balls_available_pos_y, static_cast<f32>(balls_available_size), BALL_COLOR);
-            balls_available_pos_y -= balls_available_spacing + balls_available_size;
+            DrawTextureNPatch(texture_from_type(renderer, TextureType::KeySpace), patch_info, balls_rect, Vector2Zero(), 0.f, BALL_COLOR);
+            balls_rect.y += ICON_SPACING + ICON_SIZE;
         }
         
-        i32 wind_available_spacing = 20;
-        i32 wind_available_size = 30;
-        i32 wind_available_pos_x = balls_available_pos_x - balls_available_spacing - balls_available_size * 2;
-        i32 wind_available_pos_y = fby - wind_available_spacing - wind_available_size;
+        //wind_rect.y += WIND_AVAILABLE_SPACING;
         for (u32 i = 0; i < game_state.player.wind_available; i++)
         {
-            DrawCircle(wind_available_pos_x, wind_available_pos_y, static_cast<f32>(wind_available_size), YELLOW);
-            wind_available_pos_y -= wind_available_spacing + wind_available_size;
+            DrawTextureNPatch(texture_from_type(renderer, TextureType::KeyUp), patch_info, wind_rect, Vector2Zero(), 0.f, WHITE);
+            wind_rect.y += ICON_SPACING + ICON_SIZE;
         }
+
+        auto tutorial_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2 { 0.0, 1.0f }, Vector2 { ICON_SIZE, ICON_SIZE }, Vector2 { 0.0, 1.0f });
+        constexpr i32 TUTORIAL_SMALL_MARGIN = 10;
+        constexpr i32 TUTORIAL_BIG_MARGIN = 40;
+        tutorial_rect.x += TUTORIAL_SMALL_MARGIN;
+        tutorial_rect.y -= TUTORIAL_SMALL_MARGIN;
+        
+        DrawTextureNPatch(texture_from_type(renderer, TextureType::KeyA), patch_info, tutorial_rect, Vector2Zero(), 0.f, WHITE);
+        tutorial_rect.x += tutorial_rect.width + TUTORIAL_SMALL_MARGIN;
+        DrawTextureNPatch(texture_from_type(renderer, TextureType::KeyD), patch_info, tutorial_rect, Vector2Zero(), 0.f, WHITE);
+        
+        tutorial_rect.x += tutorial_rect.width + TUTORIAL_BIG_MARGIN;
+        DrawTextureNPatch(texture_from_type(renderer, TextureType::KeySpace), patch_info, tutorial_rect, Vector2Zero(), 0.f, WHITE);
+        
+        tutorial_rect.x += tutorial_rect.width + TUTORIAL_BIG_MARGIN;
+        DrawTextureNPatch(texture_from_type(renderer, TextureType::KeyLeft), patch_info, tutorial_rect, Vector2Zero(), 0.f, WHITE);
+        tutorial_rect.x += tutorial_rect.width + TUTORIAL_SMALL_MARGIN;
+        DrawTextureNPatch(texture_from_type(renderer, TextureType::KeyUp), patch_info, tutorial_rect, Vector2Zero(), 0.f, WHITE);
+        tutorial_rect.x += tutorial_rect.width + TUTORIAL_SMALL_MARGIN;
+        DrawTextureNPatch(texture_from_type(renderer, TextureType::KeyDown), patch_info, tutorial_rect, Vector2Zero(), 0.f, WHITE);
+        tutorial_rect.x += tutorial_rect.width + TUTORIAL_SMALL_MARGIN;
+        DrawTextureNPatch(texture_from_type(renderer, TextureType::KeyRight), patch_info, tutorial_rect, Vector2Zero(), 0.f, WHITE);
     }
 
     void renderer_render_level_complete(Renderer& renderer, GameState& game_state, Vector2 framebuffer_size)

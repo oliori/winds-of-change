@@ -11,7 +11,7 @@ int main()
         .current_page = woc::MenuPageType::MainMenu,
     };
     auto window = woc::window_init();
-    auto renderer = woc::Renderer{};
+    auto renderer = woc::renderer_init();
     auto game_state = std::optional<woc::GameState>{};
     auto audio_state = woc::audio_init();
 
@@ -148,6 +148,7 @@ int main()
     }
 
     // Unnecessary before a program exit. OS cleans up.
+    woc::renderer_deinit(renderer);
     woc::audio_deinit(audio_state);
     woc::window_deinit(window);
 
