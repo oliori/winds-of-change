@@ -50,6 +50,8 @@ namespace woc
     constexpr f32 PROJECTILE_DEAD_EFFECT_DURATION = 1.0f;
     
     constexpr f32 ICON_SIZE = 45.f;
+    constexpr f32 ICON_SPACING = 20.f;
+    constexpr f32 BUTTON_SPACING = 10.f;
 
     constexpr Color BACKGROUND_COLOR = Color { 0xE3, 0xCB, 0xAF, 0xFF };
     constexpr Color BALL_COLOR = Color { 0x52, 0x82, 0x7D, 0xFF };
@@ -198,6 +200,8 @@ namespace woc
     
     enum class SettingsButtonType
     {
+        Resolution,
+        Fullscreen,
         Back,
     };
     static_assert(static_cast<u32>(SettingsButtonType::Back) < MAX_BUTTONS_PER_PAGE);
@@ -217,9 +221,12 @@ namespace woc
     struct MenuState
     {
         MenuPageType current_page;
+        bool is_fullscreen;
+        f32 volume;
         std::array<bool, MAX_BUTTONS_PER_PAGE> buttons_hover_state;
     };
-    MenuState menu_init(MenuPageType page);
+    MenuState menu_init(MenuPageType page, bool is_fullscreen);
+    void menu_change_page(MenuState& menu_state, MenuPageType page);
 
     enum class TextureType
     {

@@ -22,6 +22,19 @@ namespace woc
         return !WindowShouldClose();
     }
 
+    void window_set_fullscreen(Window& window, bool fullscreen)
+    {
+        if (fullscreen != window_is_fullscreen(window))
+        {
+            ToggleFullscreen();
+        }
+    }
+
+    bool window_is_fullscreen(Window& window)
+    {
+        return IsWindowFullscreen();
+    }
+
     bool window_is_visible(Window& window)
     {
         return !IsWindowHidden();

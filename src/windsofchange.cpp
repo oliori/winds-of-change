@@ -402,7 +402,7 @@ namespace woc
             UnloadTexture(tex);
         }
     }
-    
+
     woc_internal bool renderer_ui_button(
         Rectangle bounds, std::string_view text, bool already_hovered,
         AudioState& audio_state,
@@ -422,10 +422,30 @@ namespace woc
 
         return false;
     }
+    
+    woc_internal bool renderer_ui_toggle_button(
+        Rectangle bounds, std::string_view text, bool already_hovered,
+        AudioState& audio_state,
+        bool& out_hover, bool& toggled)
+    {
+        out_hover = CheckCollisionPointRec(GetMousePosition(), bounds);
+        if (!already_hovered && out_hover)
+        {
+            audio_play_sound_randomize_pitch(audio_state, AudioType::UIButtonHover);
+        }
+
+        bool prev_toggled = toggled;
+        GuiToggle(bounds, text.data(), &toggled);
+        if (prev_toggled != toggled)
+        {
+            audio_play_sound_randomize_pitch(audio_state, AudioType::UIButtonClick);
+            return true;
+        }
+
+        return false;
+    }
 
     void renderer_update_and_render_menu(Renderer& renderer, MenuState& menu_state, std::optional<GameState>& game_state, AudioState& audio_state, Vector2 framebuffer_size) {
-        constexpr auto button_spacing = 10.f;
-        
         auto title_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.5}, Vector2 { framebuffer_size.x, 150.f }, Vector2{0.5f, 0.0f});
         title_rect.y -= title_rect.height + 40;
         GuiSetStyle(DEFAULT, TEXT_SIZE, 125);
@@ -444,61 +464,84 @@ namespace woc
         {
             audio_play_sound_randomize_pitch(audio_state, AudioType::UIButtonClick);
             audio_play_sound_randomize_pitch(audio_state, AudioType::UIPageChange);
-            menu_state = menu_init(MenuPageType::Game);
+            menu_change_page(menu_state, MenuPageType::Game);
         }
         GuiSetState(STATE_NORMAL);
         
-        primary_buttons_rect.y += primary_buttons_rect.height + button_spacing;
-        secondary_buttons_rect.y += primary_buttons_rect.height + button_spacing;
+        primary_buttons_rect.y += primary_buttons_rect.height + BUTTON_SPACING;
+        secondary_buttons_rect.y += primary_buttons_rect.height + BUTTON_SPACING;
         
         auto& new_game_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(MainMenuButtonType::NewGame));
         if (renderer_ui_button(primary_buttons_rect, "NEW GAME", new_game_hover, audio_state, new_game_hover))
         {
             audio_play_sound_randomize_pitch(audio_state, AudioType::UIButtonClick);
             audio_play_sound_randomize_pitch(audio_state, AudioType::UIPageChange);
-            menu_state = menu_init(MenuPageType::Game);
+            menu_change_page(menu_state, MenuPageType::Game);
             game_state = game_init(START_LEVEL);
         }
         
         GuiSetStyle(DEFAULT, TEXT_SIZE, 40);
-        primary_buttons_rect.y += primary_buttons_rect.height + button_spacing;
-        secondary_buttons_rect.y += primary_buttons_rect.height + button_spacing;
+        primary_buttons_rect.y += primary_buttons_rect.height + BUTTON_SPACING;
+        secondary_buttons_rect.y += primary_buttons_rect.height + BUTTON_SPACING;
         auto& settings_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(MainMenuButtonType::Settings));
         if (renderer_ui_button(secondary_buttons_rect, "SETTINGS", settings_hover, audio_state, settings_hover))
         {
             audio_play_sound_randomize_pitch(audio_state, AudioType::UIButtonClick);
             audio_play_sound_randomize_pitch(audio_state, AudioType::UIPageChange);
-            menu_state = menu_init(MenuPageType::Settings);
+            menu_change_page(menu_state, MenuPageType::Settings);
         }
         
-        secondary_buttons_rect.y += secondary_buttons_rect.height + button_spacing;
+        secondary_buttons_rect.y += secondary_buttons_rect.height + BUTTON_SPACING;
         auto& credits_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(MainMenuButtonType::Credits));
         if (renderer_ui_button(secondary_buttons_rect, "CREDITS", credits_hover, audio_state, credits_hover))
         {
             audio_play_sound_randomize_pitch(audio_state, AudioType::UIButtonClick);
             audio_play_sound_randomize_pitch(audio_state, AudioType::UIPageChange);
-            menu_state = menu_init(MenuPageType::Credits);
+            menu_change_page(menu_state, MenuPageType::Credits);
         }
         
-        secondary_buttons_rect.y += secondary_buttons_rect.height + button_spacing;
+        secondary_buttons_rect.y += secondary_buttons_rect.height + BUTTON_SPACING;
         auto& quit_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(MainMenuButtonType::Quit));
         if (renderer_ui_button(secondary_buttons_rect, "QUIT", quit_hover, audio_state, quit_hover))
         {
             audio_play_sound_randomize_pitch(audio_state, AudioType::UIButtonClick);
             audio_play_sound_randomize_pitch(audio_state, AudioType::UIPageChange);
-            menu_state = menu_init(MenuPageType::Quit);
+            menu_change_page(menu_state, MenuPageType::Quit);
         }
     }
 
     void renderer_update_and_render_settings(Renderer& renderer, MenuState& menu_state, AudioState& audio_state, Vector2 framebuffer_size)
     {
-        auto button_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.5f}, Vector2 { 300.f, 50.f }, Vector2{0.5f, 0.0f});
-        if (GuiButton(button_rect, "BACK"))
+        auto button_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.3f}, Vector2 { 300.f, 50.f }, Vector2{0.5f, 0.0f});
+        auto& back_hover = menu_state.buttons_hover_state.at((size_t)SettingsButtonType::Back);
+        GuiSetState(STATE_NORMAL);
+        
+        GuiLine(button_rect, "WINDOW");
+        button_rect.y += button_rect.height + BUTTON_SPACING;
+        if (renderer_ui_toggle_button(button_rect, "FULLSCREEN", back_hover, audio_state, back_hover, menu_state.is_fullscreen))
+        {
+            audio_play_sound(audio_state, AudioType::UIButtonClick);
+        }
+        button_rect.y += button_rect.height + BUTTON_SPACING;
+        
+        GuiLine(button_rect, "AUDIO");
+        button_rect.y += button_rect.height + BUTTON_SPACING;
+
+        GuiSlider(button_rect, "VOLUME:", "", &menu_state.volume, 0.0f, 1.0f);
+        button_rect.y += button_rect.height + BUTTON_SPACING;
+
+        GuiSetStyle(DEFAULT, TEXT_SIZE, 20);
+
+        constexpr f32 SMALL_BUTTON_SIZE = 150.f;
+        button_rect.x += (button_rect.width - SMALL_BUTTON_SIZE) / 2.f;
+        button_rect.width = SMALL_BUTTON_SIZE;
+        if (renderer_ui_button(button_rect, "BACK", back_hover, audio_state, back_hover))
         {
             audio_play_sound(audio_state, AudioType::UIButtonClick);
             audio_play_sound(audio_state, AudioType::UIPageChange);
-            menu_state.current_page = MenuPageType::MainMenu;
+            menu_change_page(menu_state, MenuPageType::MainMenu);
         }
+        GuiSetStyle(DEFAULT, TEXT_SIZE, 40);
     }
     
     void renderer_update_and_render_credits(Renderer& renderer, MenuState& menu_state, AudioState& audio_state, Vector2 framebuffer_size)
@@ -595,7 +638,6 @@ namespace woc
             .bottom = 0,
             .layout = 0
         };
-        constexpr f32 ICON_SPACING = 20.f;
         auto balls_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2 { 1.0, 1.0f }, Vector2 { ICON_SIZE, ICON_SIZE }, Vector2 { 1.0, 1.0f });
         auto wind_rect = balls_rect;
         wind_rect.x -= ICON_SPACING + ICON_SIZE;
@@ -684,13 +726,24 @@ namespace woc
         ClearBackground(BACKGROUND_COLOR);
     }
 
-    MenuState menu_init(MenuPageType page)
+    MenuState menu_init(MenuPageType page, bool is_fullscreen)
     {
         auto result = MenuState {
             .current_page = page,
+            .is_fullscreen = is_fullscreen,
+            .volume = 1.0f,
             .buttons_hover_state = {}
         };
         return result;
+    }
+
+    void menu_change_page(MenuState& menu_state, MenuPageType page)
+    {
+        if (page != menu_state.current_page)
+        {
+            menu_state.current_page = page;
+            menu_state.buttons_hover_state.fill(false);
+        }
     }
 
     f32 ease_in_back(f32 alpha)

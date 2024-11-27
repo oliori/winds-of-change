@@ -4,15 +4,13 @@
 // TODO:
 // - SFX: Send ball, Use wind, Ball disappear, Level lost, Level won, Wall disappear, Game won
 // - Polish: Tweak ball movement speed, Add more levels, Better Level won/lost UI, Better game won UI
-// - Missing: Settings page, Credits page, Disable rmodels in raylib
+// - Missing: Settings page, Credits page
 // - Fix: Weird collision with ball, input issue
 // - Extra: Add moving walls
 
 int main()
 {
-    auto menu_state = woc::MenuState {
-        .current_page = woc::MenuPageType::MainMenu,
-    };
+    auto menu_state = woc::menu_init(woc::MenuPageType::MainMenu, false);
     auto window = woc::window_init();
     auto renderer = woc::renderer_init();
     auto game_state = std::optional<woc::GameState>{};
@@ -143,9 +141,11 @@ int main()
     woc::audio_play_sound(audio_state, woc::AudioType::MusicBackground);
     while (keep_running_app)
     {
+        menu_state.is_fullscreen = woc::window_is_fullscreen(window);
         update_app();
         update_game(app_input_state);
         app_input_state = woc::InputState{};
+        woc::window_set_fullscreen(window, menu_state.is_fullscreen);
     }
 
     // Unnecessary before a program exit. OS cleans up.

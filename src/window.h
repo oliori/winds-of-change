@@ -12,6 +12,8 @@ namespace woc
     Window window_init();
     void window_close(Window& window);
     bool window_is_running(Window& window);
+    void window_set_fullscreen(Window& window, bool fullscreen);
+    bool window_is_fullscreen(Window& window);
     bool window_is_visible(Window& window);
     void window_deinit(Window& window);
     Vector2 window_size(Window& window);
