@@ -234,7 +234,7 @@ namespace woc
         f32 volume;
         std::array<bool, MAX_BUTTONS_PER_PAGE> buttons_hover_state;
     };
-    MenuState menu_init(MenuPageType page, bool is_fullscreen);
+    MenuState menu_init(MenuPageType page, bool is_fullscreen, ResolutionPreset resolution);
     void menu_change_page(MenuState& menu_state, MenuPageType page);
     Vector2 menu_resolution_to_size(ResolutionPreset resolution);
     const char* menu_resolution_title(ResolutionPreset resolution);

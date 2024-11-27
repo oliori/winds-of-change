@@ -742,10 +742,11 @@ namespace woc
         ClearBackground(BACKGROUND_COLOR);
     }
 
-    MenuState menu_init(MenuPageType page, bool is_fullscreen)
+    MenuState menu_init(MenuPageType page, bool is_fullscreen, ResolutionPreset resolution)
     {
         auto result = MenuState {
             .current_page = page,
+            .resolution = resolution,
             .is_fullscreen = is_fullscreen,
             .volume = 1.0f,
             .buttons_hover_state = {}

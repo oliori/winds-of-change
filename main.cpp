@@ -3,14 +3,14 @@
 
 // TODO:
 // - SFX: Send ball, Use wind, Ball disappear, Level lost, Level won, Wall disappear, Game won
-// - Polish: Tweak ball movement speed, Add more levels, Better Level won/lost UI, Better game won UI
-// - Missing: Settings page, Credits page
+// - Polish: Tweak ball movement speed, Add more levels, Support 1280x720, Better Level won/lost UI, Better game won UI
+// - Missing: Credits page
 // - Fix: Weird collision with ball, input issue
 // - Extra: Add moving walls
 
 int main()
 {
-    auto menu_state = woc::menu_init(woc::MenuPageType::MainMenu, false);
+    auto menu_state = woc::menu_init(woc::MenuPageType::MainMenu, false, woc::ResolutionPreset::Resolution_1600x900);
     auto window = woc::window_init();
     auto renderer = woc::renderer_init();
     auto game_state = std::optional<woc::GameState>{};
