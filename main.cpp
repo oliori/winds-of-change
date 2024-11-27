@@ -4,6 +4,13 @@
 // KNOWN ISSUES:
 // - Input lag. Move to another thread?
 
+// TODO:
+// - SFX: Send ball, Use wind, Ball disappear, Level lost, Level won, Wall disappear, Game won
+// - Polish: Ball disappear squish, Tweak ball movement speed, Add more levels, Better Level won/lost UI, Better game won UI
+// - Missing: Settings page, Credits page
+// - Fix: Weird collision with ball
+// - Extra: Add moving walls
+
 int main()
 {
     // Doesn't need smart pointers as when it goes out of scope, the app exits and OS cleans it up
