@@ -73,8 +73,16 @@ namespace woc
     enum class AudioType : u32
     {
         MusicBackground = 0,
+        
         SFXIndestructibleImpact,
         SFXWallImpact,
+        SFXSendBall,
+        SFXWind,
+        SFXBallDisappear,
+        SFXLevelLost,
+        SFXLevelWon,
+        SFXWallDisappear,
+        
         UIButtonHover,
         UIButtonClick,
         UIPageChange,
@@ -82,6 +90,7 @@ namespace woc
     };
     struct AudioState
     {
+        f32 time_till_background_music;
         std::array<Sound, static_cast<size_t>(AudioType::MAX_AUDIO_TYPE)> sounds;
     };
     AudioState audio_init();

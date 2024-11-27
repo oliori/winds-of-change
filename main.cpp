@@ -72,6 +72,17 @@ int main()
         }
         
         auto delta_seconds = GetFrameTime();
+
+        if (!IsSoundPlaying(audio_state.sounds.at((size_t)woc::AudioType::MusicBackground)))
+        {
+            audio_state.time_till_background_music -= delta_seconds;
+            if (audio_state.time_till_background_music < 0.f)
+            {
+                woc::audio_play_sound(audio_state, woc::AudioType::MusicBackground);
+                audio_state.time_till_background_music = static_cast<woc::f32>(GetRandomValue(10, 20));
+            }
+        }
+        
         switch (menu_state.current_page)
         {
             case woc::MenuPageType::MainMenu:
@@ -138,7 +149,6 @@ int main()
         }
     };
 
-    woc::audio_play_sound(audio_state, woc::AudioType::MusicBackground);
     while (keep_running_app)
     {
         menu_state.is_fullscreen = woc::window_is_fullscreen(window);

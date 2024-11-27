@@ -270,10 +270,11 @@ namespace woc
             dead_projectile.timer -= delta_seconds;
             return dead_projectile.timer <= 0.f;
         });
-        std::erase_if(game_state.player_projectiles, [&dbe = game_state.dead_projectile_effects] (Projectile& p)
+        std::erase_if(game_state.player_projectiles, [&audio_state, &dbe = game_state.dead_projectile_effects] (Projectile& p)
         {
             if (p.pos.x < WORLD_MIN.x | p.pos.x > WORLD_MAX.x | p.pos.y < WORLD_MIN.y | p.pos.y > WORLD_MAX.y)
             {
+                audio_play_sound_randomize_pitch(audio_state, AudioType::SFXBallDisappear);
                 dbe.emplace_back(ProjectileDeadEffect {
                     .pos = p.pos,
                     .dir = p.dir,
@@ -336,10 +337,11 @@ namespace woc
             dead_effect.timer -= delta_seconds;
             return dead_effect.timer <= 0.f;
         });
-        std::erase_if(game_state.enemies, [&dee = game_state.dead_enemy_effects] (EnemyState& e)
+        std::erase_if(game_state.enemies, [&dee = game_state.dead_enemy_effects, &audio_state] (EnemyState& e)
         {
             if (e.health <= 0 && e.type != EnemyType::Indestructible)
             {
+                audio_play_sound_randomize_pitch(audio_state, AudioType::SFXWallDisappear);
                 dee.emplace_back(EnemyDeadEffect {
                     .pos = e.pos,
                     .size = e.size,
@@ -352,6 +354,7 @@ namespace woc
 
         if (input.send_ball & game_state.player.balls_available)
         {
+            audio_play_sound_randomize_pitch(audio_state, AudioType::SFXSendBall);
             game_state.player_projectiles.emplace_back(Projectile {
                 .pos = Vector2Add(player_pos(game_state.player), Vector2 { 0.f, -BALL_DEFAULT_Y_OFFSET }),
                 .dir = Vector2 { 0, -1 },
@@ -363,6 +366,7 @@ namespace woc
         if (!game_state.player.active_wind_ability && game_state.player.wind_available)
         {
             if (input.wind_dir_x) {
+                audio_play_sound_randomize_pitch(audio_state, AudioType::SFXWind);
                 game_state.player.active_wind_ability = WindAbility {
                     .timer = WIND_DURATION,
                     .angle = Radian { .val = static_cast<f32>(input.wind_dir_x) * PI / 4 },
@@ -371,6 +375,7 @@ namespace woc
                 };
                 game_state.player.wind_available--;
             } else if (input.wind_dir_y == 1) {
+                audio_play_sound_randomize_pitch(audio_state, AudioType::SFXWind);
                 game_state.player.active_wind_ability = WindAbility {
                     .timer = WIND_DURATION,
                     .angle = Radian { .val = 0 },
@@ -379,6 +384,7 @@ namespace woc
                 };
                 game_state.player.wind_available--;
             } else if (input.wind_dir_y == -1) {
+                audio_play_sound_randomize_pitch(audio_state, AudioType::SFXWind);
                 game_state.player.active_wind_ability = WindAbility {
                     .timer = WIND_DURATION,
                     .angle = Radian { 0.0f },
@@ -410,11 +416,13 @@ namespace woc
         if (game_state.level_status == LevelStatus::InProgress && !std::ranges::any_of(game_state.enemies, [] (EnemyState& e) { return e.contributes_to_win; })) 
         {
             game_state.level_status = LevelStatus::Won;
+            audio_play_sound(audio_state, AudioType::SFXLevelWon);
         } else if (game_state.level_status == LevelStatus::InProgress
             && !game_state.player.balls_available
             && game_state.player_projectiles.empty()
             && game_state.dead_projectile_effects.empty())
         {
+            audio_play_sound(audio_state, AudioType::SFXLevelLost);
             game_state.level_status = LevelStatus::Lost;
         }
     }
@@ -928,12 +936,21 @@ namespace woc
         InitAudioDevice();
 
         auto result = AudioState {
-            .sounds{}
+            .time_till_background_music = 0.f,
+            .sounds{},
         };
         result.sounds.at(static_cast<size_t>(AudioType::MusicBackground)) = LoadSound("assets/audio/cozy.ogg");
         
         result.sounds.at(static_cast<size_t>(AudioType::SFXIndestructibleImpact)) = LoadSound("assets/audio/temp/impactTin_medium_004.ogg");
         result.sounds.at(static_cast<size_t>(AudioType::SFXWallImpact)) = LoadSound("assets/audio/temp/impactGlass_medium_004.ogg");
+        
+        result.sounds.at(static_cast<size_t>(AudioType::SFXSendBall)) = LoadSound("assets/audio/temp/phaserUp3.ogg");
+        result.sounds.at(static_cast<size_t>(AudioType::SFXWind)) = LoadSound("assets/audio/temp/phaseJump3.ogg");
+        result.sounds.at(static_cast<size_t>(AudioType::SFXBallDisappear)) = LoadSound("assets/audio/temp/phaserDown3.ogg");
+        result.sounds.at(static_cast<size_t>(AudioType::SFXWallDisappear)) = LoadSound("assets/audio/temp/pepSound5.ogg");
+        
+        result.sounds.at(static_cast<size_t>(AudioType::SFXLevelLost)) = LoadSound("assets/audio/temp/error_003.ogg");
+        result.sounds.at(static_cast<size_t>(AudioType::SFXLevelWon)) = LoadSound("assets/audio/temp/confirmation_003.ogg");
         
         result.sounds.at(static_cast<size_t>(AudioType::UIPageChange)) = LoadSound("assets/audio/temp/card-slide-6.ogg");
         result.sounds.at(static_cast<size_t>(AudioType::UIButtonHover)) = LoadSound("assets/audio/temp/chips-handle-3.ogg");
