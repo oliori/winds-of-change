@@ -493,6 +493,7 @@ namespace woc
         
         secondary_buttons_rect.y += secondary_buttons_rect.height + BUTTON_SPACING;
         auto& credits_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(MainMenuButtonType::Credits));
+
         if (renderer_ui_button(secondary_buttons_rect, "CREDITS", credits_hover, audio_state, credits_hover))
         {
             audio_play_sound_randomize_pitch(audio_state, AudioType::UIButtonClick);
@@ -562,13 +563,45 @@ namespace woc
     
     void renderer_update_and_render_credits(Renderer& renderer, MenuState& menu_state, AudioState& audio_state, Vector2 framebuffer_size)
     {
-        auto button_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.5f}, Vector2 { 300.f, 50.f }, Vector2{0.5f, 0.0f});
-        if (GuiButton(button_rect, "BACK"))
+        auto label_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.16f}, Vector2 { framebuffer_size.x, 50.f }, Vector2{0.5f, 0.0f});
+        GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_CENTER);
+        GuiSetStyle(DEFAULT, TEXT_SIZE, 40);
+        GuiLabel(label_rect, "Developed by:");
+        label_rect.y += label_rect.height + BUTTON_SPACING;
+        label_rect.height = 100.f;
+        GuiSetStyle(DEFAULT, TEXT_SIZE, 80);
+        GuiLabel(label_rect, "Oliver Jorgensen");
+        label_rect.y += label_rect.height + BUTTON_SPACING * 3;
+        label_rect.height = 50.f;
+        GuiSetStyle(DEFAULT, TEXT_SIZE, 40);
+        
+        GuiLabel(label_rect, "Background Music:");
+        label_rect.y += label_rect.height + BUTTON_SPACING;
+        GuiLabel(label_rect, "Cozy - Composed by One Man Symphony");
+        label_rect.y += label_rect.height + BUTTON_SPACING;
+        GuiLabel(label_rect, "https://onemansymphony.bandcamp.com");
+        label_rect.y += label_rect.height + BUTTON_SPACING * 3;
+        
+        GuiLabel(label_rect, "Sound Effects & Icons");
+        label_rect.y += label_rect.height + BUTTON_SPACING;
+        GuiLabel(label_rect, "Created by Kenney");
+        label_rect.y += label_rect.height + BUTTON_SPACING;
+        GuiLabel(label_rect, "https://kenney.nl");
+        label_rect.y += label_rect.height + BUTTON_SPACING * 3;
+        
+        auto button_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.75f}, Vector2 { 300.f, 50.f }, Vector2{0.5f, 0.0f});
+        button_rect.y = label_rect.y;
+        
+        GuiSetStyle(DEFAULT, TEXT_SIZE, 20);
+        auto& back_hover = menu_state.buttons_hover_state.at((size_t)CreditsButtonType::Back);
+        if (renderer_ui_button(button_rect, "BACK", back_hover, audio_state, back_hover))
         {
             audio_play_sound(audio_state, AudioType::UIButtonClick);
             audio_play_sound(audio_state, AudioType::UIPageChange);
-            menu_state.current_page = MenuPageType::MainMenu;
+            menu_change_page(menu_state, MenuPageType::MainMenu);
         }
+        GuiSetStyle(DEFAULT, TEXT_SIZE, 40);
+        button_rect.y += button_rect.height + BUTTON_SPACING;
 
         // Background music credits
     }
