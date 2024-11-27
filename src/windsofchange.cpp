@@ -704,24 +704,32 @@ namespace woc
             auto disp = Vector2 { -half_size.x, -half_size.y };
             disp = Vector2Rotate(disp, e.rot.val);
             auto e_rect = Rectangle {e.pos.x + disp.x, e.pos.y + disp.y, e.size.x, e.size.y };
+            
+            auto border_disp = Vector2Rotate({ 3.f, 3.f}, e.rot.val);
             switch (e.type)
             {
                 case EnemyType::Indestructible: {
+                    auto border_rect = e_rect;
+                    border_rect.height += 6;
+                    border_rect.width += 6;
+                    border_rect.x -= border_disp.x;
+                    border_rect.y -= border_disp.y;
+                    DrawRectanglePro(border_rect, Vector2Zero(), e.rot.val * RAD2DEG, BLACK);
                     DrawRectanglePro(e_rect, Vector2Zero(), e.rot.val * RAD2DEG, INDESTRUCTIBLE_WALL_COLOR);
-                    DrawRectangleLinesEx(e_rect, 2.0f, BLACK);
+
                     break;
                 }
                 case EnemyType::Normal: {
-                    DrawRectanglePro(e_rect, Vector2Zero(), e.rot.val * RAD2DEG, WALL_COLOR);
                     auto health_rect = e_rect;
                     for (auto i = 0; i < e.health; i++)
                     {
-                        DrawRectangleLinesEx(health_rect, 2.0f, WHITE);
-                        health_rect.x -= 3;
-                        health_rect.y -= 3;
+                        health_rect.x -= border_disp.x;
+                        health_rect.y -= border_disp.y;
                         health_rect.height += 6;
                         health_rect.width += 6;
+                        DrawRectanglePro(health_rect, Vector2Zero(), e.rot.val * RAD2DEG, WHITE);
                     }
+                    DrawRectanglePro(e_rect, Vector2Zero(), e.rot.val * RAD2DEG, WALL_COLOR);
                     break;
                 }
             }

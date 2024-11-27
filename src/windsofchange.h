@@ -35,7 +35,7 @@ namespace woc
     using f64 = double;
     
     constexpr f32 WIND_DURATION = 0.75f;
-    constexpr u32 START_LEVEL = 3;
+    constexpr u32 START_LEVEL = 0;
     constexpr u32 END_LEVEL = 3;
     constexpr Vector2 WORLD_MIN = Vector2{ -700, -500 };
     constexpr Vector2 WORLD_MAX = Vector2{ 700, 500 };
