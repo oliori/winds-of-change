@@ -138,63 +138,102 @@ namespace woc
     }
 
     // Returns normal of collision or zero vector if no collision.
-    woc_internal Vector2 sphere_collides_rectangle(
-        Vector2 sphere_pos, f32 sphere_radius,
-        Vector2 rectangle_pos, Vector2 rectangle_size, Radian rectangle_rotation)
+    enum class CollisionResult
     {
-        
-        auto result = Vector2Zero();
+        NoCollision = 0,
+        Collision = 1,
+    };
+    woc_internal CollisionResult sphere_collides_rectangle(
+        Vector2 sphere_pos, Vector2 sphere_dir, f32 sphere_radius, 
+        Vector2 rectangle_pos, Vector2 rectangle_size, Radian rectangle_rotation,
+        Vector2& out_normal)
+    {
+        out_normal = Vector2Zero();
         
         auto half_size = Vector2Scale(rectangle_size, 0.5f);
         auto s_pos2 = Vector2Subtract(sphere_pos, rectangle_pos);
         s_pos2 = Vector2Rotate(s_pos2, -rectangle_rotation.val);
+        auto rotated_dir = Vector2Rotate(s_pos2, -rectangle_rotation.val);
 
-        bool inside_x = false;
-        bool inside_y = false;
+        bool inside_x = true;
+        bool inside_y = true;
         Vector2 test_point = s_pos2;
+        
         if (s_pos2.x < -half_size.x) // LEFT
         {
+            inside_x = false;
             test_point.x = -half_size.x;
-            result.x = -1.f;
+            out_normal.x = -1.f;
         } else if (s_pos2.x > half_size.x) // RIGHT
         {
+            inside_x = false;
             test_point.x = half_size.x;
-            result.x = 1.f;
-        } else
-        {
-            inside_x = true;
-        }
+            out_normal.x = 1.f;
+        } 
 
         if (s_pos2.y > half_size.y) // ABOVE
         {
+            inside_y = false;
             test_point.y = half_size.y;
-            result.y = 1.f;
+            out_normal.y = 1.f;
         } else if (s_pos2.y < -half_size.y) // BELOW
         {
+            inside_y = false;
             test_point.y = -half_size.y;
-            if (Vector2DistanceSqr(s_pos2, Vector2 { s_pos2.x, -half_size.y }) < sphere_radius * sphere_radius)
-            {
-                result.y = -1.f;
-            }
-        } else
-        {
-            inside_y = true;
-        }
+            out_normal.y = -1.f;
+        } 
 
         // INSIDE
         if (inside_y && inside_x)
         {
+            auto current_t = std::numeric_limits<f32>::max();
+
+            auto back_dir = Vector2Scale(rotated_dir, -1.f);
+            if (!FloatEquals(back_dir.x, 0.f))
+            {
+                auto hit_left_t = (-half_size.x - s_pos2.x) / back_dir.x;
+                if (hit_left_t > 0.f && hit_left_t < current_t)
+                {
+                    out_normal = Vector2 { -1.f, 0.f };
+                    current_t = hit_left_t;
+                }
+                auto hit_right_t = (half_size.x - s_pos2.x) / back_dir.x;
+                if (hit_right_t > 0.f && hit_right_t < current_t)
+                {
+                    out_normal = Vector2 { 1.f, 0.f };
+                    current_t = hit_right_t;
+                }
+            }
+            
+            if (!FloatEquals(back_dir.y, 0.f))
+            {
+                auto hit_up_t = (half_size.y - s_pos2.y) / back_dir.y;
+                if (hit_up_t > 0.f && hit_up_t < current_t)
+                {
+                    out_normal = Vector2 { 0.f, 1.f };
+                    current_t = hit_up_t;
+                }
+                auto hit_below_t = (-half_size.y - s_pos2.y) / back_dir.y;
+                if (hit_below_t > 0.f && hit_below_t < current_t)
+                {
+                    out_normal = Vector2 { 0.f, -1.f };
+                }
+            }
+            
             // For simplicity just return up vector now if we get inside the rectangle
             // Ideally this should find the intersection point using the velocity
-            result = Vector2 { 0.0f, 1.0f };
-        }
-        
-        if (Vector2DistanceSqr(s_pos2, test_point) > sphere_radius * sphere_radius)
-        {
-            return Vector2Zero();
+            out_normal = Vector2Rotate(out_normal, rectangle_rotation.val);
+            return CollisionResult::Collision;
         }
 
-        return Vector2Rotate(result, rectangle_rotation.val);
+        auto normal_dot = Vector2DotProduct(out_normal, rotated_dir);
+        if (normal_dot > 0.0f ||  Vector2DistanceSqr(s_pos2, test_point) > sphere_radius * sphere_radius)
+        {
+            return CollisionResult::NoCollision;
+        }
+
+        out_normal = Vector2Rotate(Vector2Normalize(out_normal), rectangle_rotation.val);
+        return CollisionResult::Collision;
     }
 
     void game_update(GameState& game_state, InputState& input, AudioState& audio_state, f32 delta_seconds)
@@ -251,26 +290,35 @@ namespace woc
         for (auto& p : game_state.player_projectiles)
         {
             p.pos = Vector2Add(p.pos, Vector2Scale(p.dir, game_state.player.ball_velocity * delta_seconds));
-
-            for (auto& e : game_state.enemies)
+            p.time_since_last_collision += delta_seconds;
+            if (p.time_since_last_collision > MIN_TIME_BETWEEN_COLLISIONS)
             {
-                auto collision_normal = sphere_collides_rectangle(p.pos, BALL_DEFAULT_RADIUS, e.pos, e.size, Radian { 0.0f });
-                if (!Vector2Equals(collision_normal, Vector2Zero()))
+                for (auto& e : game_state.enemies)
                 {
+                    Vector2 collision_normal = Vector2Zero();
+                    auto collision = sphere_collides_rectangle(p.pos, p.dir, BALL_DEFAULT_RADIUS, e.pos, e.size, e.rot, collision_normal);
+                    if (collision == CollisionResult::Collision)
+                    {
+                        assert(!Vector2Equals(collision_normal, Vector2Zero()));
+                        p.time_since_last_collision = 0.f;
+                        p.dir = Vector2Reflect(p.dir, collision_normal);
+                        e.health--;
+                        collide_wall |= e.type != EnemyType::Indestructible;
+                        collide_indestructible |= e.type == EnemyType::Indestructible;
+                        break;
+                    }
+                }
+                
+                Vector2 collision_normal = Vector2Zero();
+                auto collision  = sphere_collides_rectangle(p.pos, p.dir, BALL_DEFAULT_RADIUS, player_pos(game_state.player), player_size(), Radian { 0.0f }, collision_normal);
+                if (collision == CollisionResult::Collision)
+                {
+                    assert(!Vector2Equals(collision_normal, Vector2Zero()));
+                    p.time_since_last_collision = 0.f;
                     p.dir = Vector2Reflect(p.dir, collision_normal);
-                    e.health--;
-                    collide_wall |= e.type != EnemyType::Indestructible;
-                    collide_indestructible |= e.type == EnemyType::Indestructible;
+                    collide_indestructible = true;
                     break;
                 }
-            }
-            
-            auto collision_normal = sphere_collides_rectangle(p.pos, BALL_DEFAULT_RADIUS, player_pos(game_state.player), player_size(), Radian { 0.0f });
-            if (!Vector2Equals(collision_normal, Vector2Zero()))
-            {
-                p.dir = Vector2Reflect(p.dir, collision_normal);
-                collide_indestructible = true;
-                break;
             }
         }
 
@@ -306,7 +354,8 @@ namespace woc
         {
             game_state.player_projectiles.emplace_back(Projectile {
                 .pos = Vector2Add(player_pos(game_state.player), Vector2 { 0.f, -BALL_DEFAULT_Y_OFFSET }),
-                .dir = Vector2 { 0, -1 }
+                .dir = Vector2 { 0, -1 },
+                .time_since_last_collision = 0.f
             });
             game_state.player.balls_available--;
         }
@@ -924,5 +973,10 @@ namespace woc
         auto& sound = audio_state.sounds.at(static_cast<size_t>(sound_type));
         SetSoundPitch(sound, pitch);
         PlaySound(sound);
+    }
+
+    void audio_set_volume(AudioState& audio_state, f32 volume)
+    {
+        SetMasterVolume(volume);
     }
 }

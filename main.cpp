@@ -3,9 +3,10 @@
 
 // TODO:
 // - SFX: Send ball, Use wind, Ball disappear, Level lost, Level won, Wall disappear, Game won
-// - Polish: Tweak ball movement speed, Add more levels, Support 1280x720, Better Level won/lost UI, Better game won UI
+// - Polish: Tweak ball movement speed, Add more levels, Support 1280x720 
 // - Fix: Weird collision with ball, input issue
 // - Extra: Add moving walls
+// - Test on other PC
 
 int main()
 {
@@ -151,6 +152,7 @@ int main()
             woc::window_set_size(window, res_size);
         }
         woc::window_set_fullscreen(window, menu_state.is_fullscreen);
+        woc::audio_set_volume(audio_state, menu_state.volume);
     }
 
     // Unnecessary before a program exit. OS cleans up.
