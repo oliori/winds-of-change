@@ -1,19 +1,15 @@
 #include "src/windsofchange.cpp"
 #include "src/window.cpp"
 
-// KNOWN ISSUES:
-// - Input lag. Move to another thread?
-
 // TODO:
 // - SFX: Send ball, Use wind, Ball disappear, Level lost, Level won, Wall disappear, Game won
 // - Polish: Ball disappear squish, Tweak ball movement speed, Add more levels, Better Level won/lost UI, Better game won UI
-// - Missing: Settings page, Credits page
-// - Fix: Weird collision with ball
+// - Missing: Settings page, Credits page, Disable rmodels in raylib
+// - Fix: Weird collision with ball, input issue
 // - Extra: Add moving walls
 
 int main()
 {
-    // Doesn't need smart pointers as when it goes out of scope, the app exits and OS cleans it up
     auto menu_state = woc::MenuState {
         .current_page = woc::MenuPageType::MainMenu,
     };
@@ -23,8 +19,6 @@ int main()
     auto audio_state = woc::audio_init();
 
     GuiLoadStyleBluish();
-
-    // TODO: Edit raylib config and disable rmodels
 
     bool keep_running_app = true;
     bool is_window_visible = true;

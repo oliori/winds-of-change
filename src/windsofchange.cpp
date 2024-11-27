@@ -223,9 +223,26 @@ namespace woc
         game_state.player.pos_x += game_state.player.vel * delta_seconds;
         game_state.player.pos_x = Clamp(game_state.player.pos_x, WORLD_MIN.x + static_cast<f32>(PLAYER_DEFAULT_WIDTH) * 0.5f, WORLD_MAX.x - static_cast<f32>(PLAYER_DEFAULT_WIDTH) * 0.5f);
 
-        std::erase_if(game_state.player_projectiles, [] (Projectile& p)
+        std::erase_if(game_state.dead_projectile_effects, [delta_seconds, &vel = game_state.player.ball_velocity] (ProjectileDeadEffect& dead_projectile)
         {
-            return p.pos.x < WORLD_MIN.x | p.pos.x > WORLD_MAX.x | p.pos.y < WORLD_MIN.y | p.pos.y > WORLD_MAX.y;
+            auto alpha = dead_projectile.timer / PROJECTILE_DEAD_EFFECT_DURATION;
+            auto eased_alpha = ease_in_cubic(alpha);
+            dead_projectile.pos = Vector2Add(dead_projectile.pos, Vector2Scale(dead_projectile.dir, vel * delta_seconds * eased_alpha));
+            dead_projectile.timer -= delta_seconds;
+            return dead_projectile.timer <= 0.f;
+        });
+        std::erase_if(game_state.player_projectiles, [&dbe = game_state.dead_projectile_effects] (Projectile& p)
+        {
+            if (p.pos.x < WORLD_MIN.x | p.pos.x > WORLD_MAX.x | p.pos.y < WORLD_MIN.y | p.pos.y > WORLD_MAX.y)
+            {
+                dbe.emplace_back(ProjectileDeadEffect {
+                    .pos = p.pos,
+                    .dir = p.dir,
+                    .timer = PROJECTILE_DEAD_EFFECT_DURATION
+                });
+                return true;
+            }
+            return false;
         });
 
         // Without proper mixing, limit to 1 impact sound each frame
@@ -344,7 +361,10 @@ namespace woc
         if (game_state.level_status == LevelStatus::InProgress && !std::ranges::any_of(game_state.enemies, [] (EnemyState& e) { return e.contributes_to_win; })) 
         {
             game_state.level_status = LevelStatus::Won;
-        } else if (game_state.level_status == LevelStatus::InProgress && !game_state.player.balls_available && game_state.player_projectiles.empty())
+        } else if (game_state.level_status == LevelStatus::InProgress
+            && !game_state.player.balls_available
+            && game_state.player_projectiles.empty()
+            && game_state.dead_projectile_effects.empty())
         {
             game_state.level_status = LevelStatus::Lost;
         }
@@ -543,6 +563,13 @@ namespace woc
         {
             DrawCircleV(projectile.pos, BALL_DEFAULT_RADIUS, BALL_COLOR);
         }
+        for (auto& p : game_state.dead_projectile_effects)
+        {
+            auto alpha = p.timer / PROJECTILE_DEAD_EFFECT_DURATION;
+            auto alpha_eased = ease_in_back(alpha);
+            auto size = BALL_DEFAULT_RADIUS * alpha_eased;
+            DrawCircleV(p.pos, size, BALL_COLOR);
+        }
 
         EndMode2D();
 
@@ -659,6 +686,11 @@ namespace woc
         return c3 * alpha * alpha * alpha - c1 * alpha * alpha;
     }
 
+    f32 ease_in_cubic(f32 alpha)
+    {
+        return alpha * alpha * alpha;
+    }
+
     AudioState audio_init()
     {
         InitAudioDevice();
@@ -702,7 +734,6 @@ namespace woc
         f32 frand = static_cast<f32>(rand) / (10000.f * 0.5f) - 1.f;
         constexpr f32 PITCH_VARIATION = 0.10f;
         f32 pitch = 1 + frand * PITCH_VARIATION;
-        std::cout << pitch << std::endl;
         auto& sound = audio_state.sounds.at(static_cast<size_t>(sound_type));
         SetSoundPitch(sound, pitch);
         PlaySound(sound);
