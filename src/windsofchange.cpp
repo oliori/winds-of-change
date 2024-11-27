@@ -738,34 +738,64 @@ namespace woc
         auto& next_level_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(GameButtonType::NextLevel));
         if (renderer_ui_button(primary_buttons_rect, "NEXT LEVEL", next_level_hover, audio_state, next_level_hover))
         {
-            audio_play_sound_randomize_pitch(audio_state, AudioType::UIPageChange);
             game_state = game_init(game_state.current_level+1);
-            menu_change_page(menu_state, MenuPageType::Game);
         }
-        GuiSetState(STATE_NORMAL);
     }
     
-    void renderer_render_level_fail(Renderer& renderer, GameState& game_state, Vector2 framebuffer_size)
+    void renderer_render_level_fail(Renderer& renderer, GameState& game_state, MenuState& menu_state, AudioState& audio_state, Vector2 framebuffer_size)
     {
         i32 fbx = static_cast<i32>(framebuffer_size.x);
         i32 fby = static_cast<i32>(framebuffer_size.y);
-        DrawRectangle(0, 0, fbx, fby, Color{0, 0, 0, static_cast<u8>(Lerp(225.f, 0.f, game_state.time_scale * game_state.time_scale))});
-        auto buttons_rect = ui_rectangle_from_anchor(framebuffer_size, { 0.5, 0.5 }, { 300.f, 50.f});
-        if (GuiButton(buttons_rect, "TRY AGAIN"))
+        Color overlay_color = BACKGROUND_COLOR;
+        overlay_color.a = static_cast<u8>(Lerp(225.f, 0.f, game_state.time_scale * game_state.time_scale));
+        DrawRectangle(0, 0, fbx, fby, overlay_color);
+        
+        auto title_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.5}, Vector2 { framebuffer_size.x, 150.f }, Vector2{0.5f, 0.0f});
+        title_rect.y -= title_rect.height + 40;
+        GuiSetStyle(DEFAULT, TEXT_SIZE, 125);
+        GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_CENTER);
+        GuiSetState(STATE_FOCUSED);
+        GuiLabel(title_rect, "NOT QUITE...");
+        GuiSetState(STATE_NORMAL);
+        
+        GuiSetStyle(DEFAULT, TEXT_SIZE, 65);
+        auto primary_buttons_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.5f}, Vector2 { 400.f, 100.f }, Vector2{0.5f, 0.0f});
+        auto& try_again_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(GameButtonType::TryAgain));
+        if (renderer_ui_button(primary_buttons_rect, "TRY AGAIN", try_again_hover, audio_state, try_again_hover))
         {
             game_state = game_init(game_state.current_level);
         }
     }
     
-    void renderer_render_game_won(Renderer& renderer, MenuState& menu_state, std::optional<GameState>& game_state, Vector2 framebuffer_size)
+    void renderer_render_game_won(Renderer& renderer, std::optional<GameState>& game_state,  MenuState& menu_state, AudioState& audio_state, Vector2 framebuffer_size)
     {
         i32 fbx = static_cast<i32>(framebuffer_size.x);
         i32 fby = static_cast<i32>(framebuffer_size.y);
-        DrawRectangle(0, 0, fbx, fby, Color{0, 0, 0, static_cast<u8>(Lerp(225.f, 0.f, game_state->time_scale * game_state->time_scale))});
-        auto buttons_rect = ui_rectangle_from_anchor(framebuffer_size, { 0.5, 0.5 }, { 300.f, 50.f});
-        if (GuiButton(buttons_rect, "MAIN MENU"))
+        Color overlay_color = BACKGROUND_COLOR;
+        overlay_color.a = static_cast<u8>(Lerp(225.f, 0.f, game_state->time_scale * game_state->time_scale));
+        DrawRectangle(0, 0, fbx, fby, overlay_color);
+        
+        auto title_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.5}, Vector2 { framebuffer_size.x, 150.f }, Vector2{0.5f, 0.0f});
+        title_rect.y -= title_rect.height + 2 * BUTTON_SPACING;
+        GuiSetStyle(DEFAULT, TEXT_SIZE, 125);
+        GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_CENTER);
+        GuiLabel(title_rect, "YOU WON!");
+        title_rect.y -= title_rect.height + 2 * BUTTON_SPACING;
+        GuiLabel(title_rect, "CONGRATULATIONS!");
+        
+        GuiSetStyle(DEFAULT, TEXT_SIZE, 65);
+        auto primary_buttons_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.5f}, Vector2 { 400.f, 100.f }, Vector2{0.5f, 0.0f});
+        auto& back_to_main_menu = menu_state.buttons_hover_state.at(static_cast<size_t>(GameButtonType::BackToMenu));
+        if (renderer_ui_button(primary_buttons_rect, "TO MENU", back_to_main_menu, audio_state, back_to_main_menu))
         {
-            menu_state.current_page = MenuPageType::MainMenu;
+            menu_change_page(menu_state, MenuPageType::MainMenu);
+            game_state = std::nullopt;
+        }
+        primary_buttons_rect.y += primary_buttons_rect.height + BUTTON_SPACING;
+        auto& credits_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(GameButtonType::Credits));
+        if (renderer_ui_button(primary_buttons_rect, "CREDITS", credits_hover, audio_state, credits_hover))
+        {
+            menu_change_page(menu_state, MenuPageType::Credits);
             game_state = std::nullopt;
         }
     }

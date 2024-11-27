@@ -95,14 +95,14 @@ int main()
                     {
                         if (game_state->current_level == woc::END_LEVEL)
                         {
-                            woc::renderer_render_game_won(renderer, menu_state, game_state, *window_size);
+                            woc::renderer_render_game_won(renderer, game_state, menu_state, audio_state, *window_size);
                         } else
                         {
                             woc::renderer_render_level_complete(renderer, *game_state, menu_state, audio_state, *window_size);
                         }
                     } else if (game_state->level_status == woc::LevelStatus::Lost)
                     {
-                        woc::renderer_render_level_fail(renderer, *game_state, *window_size);
+                        woc::renderer_render_level_fail(renderer, *game_state, menu_state, audio_state, *window_size);
                     }
                     DrawFPS(20, 20);
                     woc::renderer_finalize_rendering(renderer);
