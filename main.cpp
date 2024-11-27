@@ -26,6 +26,7 @@ int main()
         PollInputEvents();
 
         app_input_state.game_menu_swap += IsKeyPressed(KEY_ESCAPE);
+        app_input_state.restart_level += IsKeyPressed(KEY_R);
         app_input_state.new_game += IsKeyPressed(KEY_Y);
         app_input_state.send_ball += IsKeyDown(KEY_SPACE);
         
@@ -56,7 +57,7 @@ int main()
             game_state = woc::game_init(woc::START_LEVEL);
         }
         
-        if (input.game_menu_swap % 2 == 1)
+        if (input.game_menu_swap)
         {
             if (menu_state.current_page == woc::MenuPageType::Game)
             {
@@ -67,6 +68,12 @@ int main()
                 menu_state.current_page = woc::MenuPageType::Game;
                 woc::audio_play_sound_randomize_pitch(audio_state, woc::AudioType::UIPageChange);
             }
+        }
+
+        if (game_state && input.restart_level)
+        {
+            game_state = woc::game_init(game_state->current_level);
+            woc::audio_play_sound(audio_state, woc::AudioType::SFXLevelLost);
         }
         
         auto delta_seconds = GetFrameTime();

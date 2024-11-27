@@ -160,6 +160,7 @@ namespace woc
         u32 send_ball;
         u32 new_game;
         u32 game_menu_swap;
+        u32 restart_level;
     };
 
     struct Projectile
