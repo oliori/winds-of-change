@@ -187,6 +187,14 @@ namespace woc
         Credits
     };
     
+    enum class ResolutionPreset
+    {
+        Resolution_1280x720,
+        Resolution_1600x900,
+        Resolution_1920x1080,
+        MAX
+    };
+    
     constexpr u32 MAX_BUTTONS_PER_PAGE = 12;
     enum class MainMenuButtonType
     {
@@ -221,12 +229,15 @@ namespace woc
     struct MenuState
     {
         MenuPageType current_page;
+        ResolutionPreset resolution;
         bool is_fullscreen;
         f32 volume;
         std::array<bool, MAX_BUTTONS_PER_PAGE> buttons_hover_state;
     };
     MenuState menu_init(MenuPageType page, bool is_fullscreen);
     void menu_change_page(MenuState& menu_state, MenuPageType page);
+    Vector2 menu_resolution_to_size(ResolutionPreset resolution);
+    const char* menu_resolution_title(ResolutionPreset resolution);
 
     enum class TextureType
     {

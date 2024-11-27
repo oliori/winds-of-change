@@ -17,6 +17,7 @@ namespace woc
     bool window_is_visible(Window& window);
     void window_deinit(Window& window);
     Vector2 window_size(Window& window);
+    void window_set_size(Window& window, Vector2 size);
     f32 window_delta_seconds(Window& window);
     f32 window_seconds_since_init(Window& window);
 }

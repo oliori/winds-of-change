@@ -51,6 +51,15 @@ namespace woc
         return result;
     }
 
+    void window_set_size(Window& window, Vector2 size)
+    {
+        assert(size.x > 0.f);
+        assert(size.y > 0.f);
+        window.width = static_cast<u32>(static_cast<i32>(size.x));
+        window.height = static_cast<u32>(static_cast<i32>(size.y));
+        SetWindowSize(static_cast<i32>(window.width), static_cast<i32>(window.height));
+    }
+
     f32 window_delta_seconds(Window& window)
     {
         return GetFrameTime();

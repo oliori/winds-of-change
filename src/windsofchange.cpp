@@ -523,6 +523,22 @@ namespace woc
             audio_play_sound(audio_state, AudioType::UIButtonClick);
         }
         button_rect.y += button_rect.height + BUTTON_SPACING;
+
+        if (menu_state.is_fullscreen)
+        {
+            GuiSetState(STATE_DISABLED);
+        }
+        i32 current_res = static_cast<i32>(menu_state.resolution);
+        GuiSetStyle(DEFAULT, TEXT_SIZE, 20);
+        button_rect.width /= static_cast<f32>(static_cast<u32>(ResolutionPreset::MAX));
+        constexpr auto RESOLUTION_TEXT = "1280x720;1600x900;1920x1080";
+        GuiToggleGroup(button_rect, RESOLUTION_TEXT, &current_res);
+        menu_state.resolution = static_cast<ResolutionPreset>(current_res);
+        assert(menu_state.resolution < ResolutionPreset::MAX);
+        button_rect.y += button_rect.height + BUTTON_SPACING;
+        button_rect.width *= static_cast<f32>(static_cast<u32>(ResolutionPreset::MAX));
+        GuiSetStyle(DEFAULT, TEXT_SIZE, 40);
+        GuiSetState(STATE_NORMAL);
         
         GuiLine(button_rect, "AUDIO");
         button_rect.y += button_rect.height + BUTTON_SPACING;
@@ -744,6 +760,40 @@ namespace woc
             menu_state.current_page = page;
             menu_state.buttons_hover_state.fill(false);
         }
+    }
+
+    Vector2 menu_resolution_to_size(ResolutionPreset resolution)
+    {
+        switch (resolution)
+        {
+        case ResolutionPreset::Resolution_1280x720:
+            return Vector2 { 1280, 720 };
+        case ResolutionPreset::Resolution_1600x900:
+            return Vector2 { 1600, 900 };
+        case ResolutionPreset::Resolution_1920x1080:
+            return Vector2 { 1920, 1080 };
+        }
+
+        // Unhandled resolution preset
+        assert(false);
+        return Vector2Zero();
+    }
+
+    const char* menu_resolution_title(ResolutionPreset resolution)
+    {
+        switch (resolution)
+        {
+        case ResolutionPreset::Resolution_1280x720:
+            return "1280x720";
+        case ResolutionPreset::Resolution_1600x900:
+            return "1600x900";
+        case ResolutionPreset::Resolution_1920x1080:
+            return "1920x1080";
+        }
+
+        // Unhandled resolution preset
+        assert(false);
+        return "INVALID";
     }
 
     f32 ease_in_back(f32 alpha)

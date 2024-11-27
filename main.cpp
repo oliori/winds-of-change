@@ -145,6 +145,12 @@ int main()
         update_app();
         update_game(app_input_state);
         app_input_state = woc::InputState{};
+        
+        auto res_size = woc::menu_resolution_to_size(menu_state.resolution);
+        if (!menu_state.is_fullscreen && !Vector2Equals(res_size, window_size)) 
+        {
+            woc::window_set_size(window, res_size);
+        }
         woc::window_set_fullscreen(window, menu_state.is_fullscreen);
     }
 
