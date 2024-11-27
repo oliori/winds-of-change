@@ -17,8 +17,6 @@ int main()
     woc::InputState app_input_state{};
     auto update_app = [&window = window, &keep_running_app, &is_window_visible, &window_size, &app_input_state] ()
     {
-        PollInputEvents();
-
         app_input_state.game_menu_swap += IsKeyPressed(KEY_ESCAPE);
         app_input_state.restart_level += IsKeyPressed(KEY_R);
         app_input_state.new_game += IsKeyPressed(KEY_Y);
