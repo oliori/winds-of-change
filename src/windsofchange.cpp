@@ -648,6 +648,7 @@ namespace woc
         texture_from_type(result, TextureType::KeyDown) = LoadTexture("assets/textures/down_key.png");
         texture_from_type(result, TextureType::KeyLeft) = LoadTexture("assets/textures/left_key.png");
         texture_from_type(result, TextureType::KeyRight) = LoadTexture("assets/textures/right_key.png");
+        texture_from_type(result, TextureType::KeyR) = LoadTexture("assets/textures/r_key.png");
         
         texture_from_type(result, TextureType::IconBall) = LoadTexture("assets/textures/ball.png");
         texture_from_type(result, TextureType::IconWind) = LoadTexture("assets/textures/wind.png");
@@ -1000,6 +1001,9 @@ namespace woc
         DrawTextureNPatch(texture_from_type(renderer, TextureType::KeyDown), patch_info, tutorial_rect, Vector2Zero(), 0.f, WHITE);
         tutorial_rect.x += tutorial_rect.width + TUTORIAL_SMALL_MARGIN;
         DrawTextureNPatch(texture_from_type(renderer, TextureType::KeyRight), patch_info, tutorial_rect, Vector2Zero(), 0.f, WHITE);
+        
+        tutorial_rect.x += tutorial_rect.width + TUTORIAL_BIG_MARGIN;
+        DrawTextureNPatch(texture_from_type(renderer, TextureType::KeyR), patch_info, tutorial_rect, Vector2Zero(), 0.f, WHITE);
     }
 
     void renderer_render_level_complete(Renderer& renderer, GameState& game_state, MenuState& menu_state, AudioState& audio_state, Vector2 framebuffer_size)

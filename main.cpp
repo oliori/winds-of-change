@@ -1,12 +1,6 @@
 #include "src/windsofchange.cpp"
 #include "src/window.cpp"
 
-// TODO:
-// - Polish: Add more levels
-// - Fix: input issue
-// - Extra: Add moving walls
-// - Test on other PC
-
 int main()
 {
     auto menu_state = woc::menu_init(woc::MenuPageType::MainMenu, false, woc::ResolutionPreset::Resolution_1600x900);

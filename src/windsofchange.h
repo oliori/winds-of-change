@@ -275,6 +275,7 @@ namespace woc
         KeyRight,
         KeyUp,
         KeyDown,
+        KeyR,
         IconBall,
         IconWind,
         MAX
