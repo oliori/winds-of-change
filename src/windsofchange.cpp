@@ -462,7 +462,6 @@ namespace woc
         }
         if (renderer_ui_button(primary_buttons_rect, "CONTINUE", continue_hover, audio_state, continue_hover))
         {
-            audio_play_sound_randomize_pitch(audio_state, AudioType::UIButtonClick);
             audio_play_sound_randomize_pitch(audio_state, AudioType::UIPageChange);
             menu_change_page(menu_state, MenuPageType::Game);
         }
@@ -474,7 +473,6 @@ namespace woc
         auto& new_game_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(MainMenuButtonType::NewGame));
         if (renderer_ui_button(primary_buttons_rect, "NEW GAME", new_game_hover, audio_state, new_game_hover))
         {
-            audio_play_sound_randomize_pitch(audio_state, AudioType::UIButtonClick);
             audio_play_sound_randomize_pitch(audio_state, AudioType::UIPageChange);
             menu_change_page(menu_state, MenuPageType::Game);
             game_state = game_init(START_LEVEL);
@@ -486,7 +484,6 @@ namespace woc
         auto& settings_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(MainMenuButtonType::Settings));
         if (renderer_ui_button(secondary_buttons_rect, "SETTINGS", settings_hover, audio_state, settings_hover))
         {
-            audio_play_sound_randomize_pitch(audio_state, AudioType::UIButtonClick);
             audio_play_sound_randomize_pitch(audio_state, AudioType::UIPageChange);
             menu_change_page(menu_state, MenuPageType::Settings);
         }
@@ -496,7 +493,6 @@ namespace woc
 
         if (renderer_ui_button(secondary_buttons_rect, "CREDITS", credits_hover, audio_state, credits_hover))
         {
-            audio_play_sound_randomize_pitch(audio_state, AudioType::UIButtonClick);
             audio_play_sound_randomize_pitch(audio_state, AudioType::UIPageChange);
             menu_change_page(menu_state, MenuPageType::Credits);
         }
@@ -505,7 +501,6 @@ namespace woc
         auto& quit_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(MainMenuButtonType::Quit));
         if (renderer_ui_button(secondary_buttons_rect, "QUIT", quit_hover, audio_state, quit_hover))
         {
-            audio_play_sound_randomize_pitch(audio_state, AudioType::UIButtonClick);
             audio_play_sound_randomize_pitch(audio_state, AudioType::UIPageChange);
             menu_change_page(menu_state, MenuPageType::Quit);
         }
@@ -521,7 +516,6 @@ namespace woc
         button_rect.y += button_rect.height + BUTTON_SPACING;
         if (renderer_ui_toggle_button(button_rect, "FULLSCREEN", back_hover, audio_state, back_hover, menu_state.is_fullscreen))
         {
-            audio_play_sound(audio_state, AudioType::UIButtonClick);
         }
         button_rect.y += button_rect.height + BUTTON_SPACING;
 
@@ -554,7 +548,6 @@ namespace woc
         button_rect.width = SMALL_BUTTON_SIZE;
         if (renderer_ui_button(button_rect, "BACK", back_hover, audio_state, back_hover))
         {
-            audio_play_sound(audio_state, AudioType::UIButtonClick);
             audio_play_sound(audio_state, AudioType::UIPageChange);
             menu_change_page(menu_state, MenuPageType::MainMenu);
         }
@@ -596,7 +589,6 @@ namespace woc
         auto& back_hover = menu_state.buttons_hover_state.at((size_t)CreditsButtonType::Back);
         if (renderer_ui_button(button_rect, "BACK", back_hover, audio_state, back_hover))
         {
-            audio_play_sound(audio_state, AudioType::UIButtonClick);
             audio_play_sound(audio_state, AudioType::UIPageChange);
             menu_change_page(menu_state, MenuPageType::MainMenu);
         }
@@ -727,16 +719,30 @@ namespace woc
         DrawTextureNPatch(texture_from_type(renderer, TextureType::KeyRight), patch_info, tutorial_rect, Vector2Zero(), 0.f, WHITE);
     }
 
-    void renderer_render_level_complete(Renderer& renderer, GameState& game_state, Vector2 framebuffer_size)
+    void renderer_render_level_complete(Renderer& renderer, GameState& game_state, MenuState& menu_state, AudioState& audio_state, Vector2 framebuffer_size)
     {
         i32 fbx = static_cast<i32>(framebuffer_size.x);
         i32 fby = static_cast<i32>(framebuffer_size.y);
-        DrawRectangle(0, 0, fbx, fby, Color{0, 0, 0, static_cast<u8>(Lerp(225.f, 0.f, game_state.time_scale * game_state.time_scale))});
-        auto buttons_rect = ui_rectangle_from_anchor(framebuffer_size, { 0.5, 0.5 }, { 300.f, 50.f});
-        if (GuiButton(buttons_rect, "NEXT LEVEL"))
+        Color overlay_color = BACKGROUND_COLOR;
+        overlay_color.a = static_cast<u8>(Lerp(225.f, 0.f, game_state.time_scale * game_state.time_scale));
+        DrawRectangle(0, 0, fbx, fby, overlay_color);
+        
+        auto title_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.5}, Vector2 { framebuffer_size.x, 150.f }, Vector2{0.5f, 0.0f});
+        title_rect.y -= title_rect.height + 40;
+        GuiSetStyle(DEFAULT, TEXT_SIZE, 125);
+        GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_CENTER);
+        GuiLabel(title_rect, "LEVEL COMPLETE");
+        
+        GuiSetStyle(DEFAULT, TEXT_SIZE, 65);
+        auto primary_buttons_rect = ui_rectangle_from_anchor(framebuffer_size, Vector2{0.5f, 0.5f}, Vector2 { 400.f, 100.f }, Vector2{0.5f, 0.0f});
+        auto& next_level_hover = menu_state.buttons_hover_state.at(static_cast<size_t>(GameButtonType::NextLevel));
+        if (renderer_ui_button(primary_buttons_rect, "NEXT LEVEL", next_level_hover, audio_state, next_level_hover))
         {
+            audio_play_sound_randomize_pitch(audio_state, AudioType::UIPageChange);
             game_state = game_init(game_state.current_level+1);
+            menu_change_page(menu_state, MenuPageType::Game);
         }
+        GuiSetState(STATE_NORMAL);
     }
     
     void renderer_render_level_fail(Renderer& renderer, GameState& game_state, Vector2 framebuffer_size)

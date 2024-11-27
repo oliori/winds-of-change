@@ -35,7 +35,7 @@ namespace woc
     using f64 = double;
     
     constexpr f32 WIND_DURATION = 0.75f;
-    constexpr u32 START_LEVEL = 2;
+    constexpr u32 START_LEVEL = 0;
     constexpr u32 END_LEVEL = 2;
     constexpr Vector2 WORLD_MIN = Vector2{ -700, -500 };
     constexpr Vector2 WORLD_MAX = Vector2{ 700, 500 };
@@ -222,6 +222,9 @@ namespace woc
     
     enum class GameButtonType
     {
+        NextLevel,
+        BackToMenu,
+        TryAgain,
         Menu,
     };
     static_assert(static_cast<u32>(GameButtonType::Menu) < MAX_BUTTONS_PER_PAGE);
@@ -263,8 +266,8 @@ namespace woc
     void renderer_update_and_render_menu(Renderer& renderer, MenuState& menu_state, std::optional<GameState>& game_state, AudioState& audio_state, Vector2 framebuffer_size);
     void renderer_update_and_render_settings(Renderer& renderer, MenuState& menu_state, AudioState& audio_state, Vector2 framebuffer_size);
     void renderer_render_world(Renderer& renderer, GameState& game_state, AudioState& audio_state, Vector2 framebuffer_size);
-    void renderer_render_level_fail(Renderer& renderer, GameState& game_state, AudioState& audio_state, Vector2 framebuffer_size);
-    void renderer_render_level_complete(Renderer& renderer, GameState& game_state, AudioState& audio_state, Vector2 framebuffer_size);
+    void renderer_render_level_fail(Renderer& renderer, GameState& game_state, MenuState& menu_state, AudioState& audio_state, Vector2 framebuffer_size);
+    void renderer_render_level_complete(Renderer& renderer, GameState& game_state, MenuState& menu_state, AudioState& audio_state, Vector2 framebuffer_size);
     void renderer_render_game_won(Renderer& renderer, MenuState& menu_state, GameState& game_state, AudioState& audio_state, Vector2 framebuffer_size);
 
 }

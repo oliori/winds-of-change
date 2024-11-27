@@ -4,7 +4,6 @@
 // TODO:
 // - SFX: Send ball, Use wind, Ball disappear, Level lost, Level won, Wall disappear, Game won
 // - Polish: Tweak ball movement speed, Add more levels, Support 1280x720, Better Level won/lost UI, Better game won UI
-// - Missing: Credits page
 // - Fix: Weird collision with ball, input issue
 // - Extra: Add moving walls
 
@@ -99,7 +98,7 @@ int main()
                             woc::renderer_render_game_won(renderer, menu_state, game_state, *window_size);
                         } else
                         {
-                            woc::renderer_render_level_complete(renderer, *game_state, *window_size);
+                            woc::renderer_render_level_complete(renderer, *game_state, menu_state, audio_state, *window_size);
                         }
                     } else if (game_state->level_status == woc::LevelStatus::Lost)
                     {
