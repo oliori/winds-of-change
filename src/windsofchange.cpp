@@ -36,16 +36,15 @@ namespace woc
     woc_internal void game_load_level(GameState& game_state)
     {
         auto& enemies = game_state.enemies;
-        //constexpr Vector2 WORLD_MIN = Vector2{ -700, -500 };
-        //constexpr Vector2 WORLD_MAX = Vector2{ 700, 500 };
         switch (game_state.current_level)
         {
             case 0:
             {
                 enemies.emplace_back(EnemyState {
                     .pos = Vector2 { 0.f, 0.f },
-                    .size = Vector2 { 100.f, 25.f },
+                    .size = WALL_SIZE_DEFAULT,
                     .health = 3,
+                    .rot = Radian { 0.f },
                     .type = EnemyType::Normal,
                     .contributes_to_win = true
                 });
@@ -56,15 +55,17 @@ namespace woc
             {
                 enemies.emplace_back(EnemyState {
                     .pos = Vector2 { -200.f, -300.f },
-                    .size = Vector2 { 100.f, 25.f },
+                    .size = WALL_SIZE_DEFAULT,
                     .health = 1,
+                    .rot = Radian { 0.f },
                     .type = EnemyType::Normal,
                     .contributes_to_win = true
                 });
                 enemies.emplace_back(EnemyState {
                     .pos = Vector2 { -200.f, -100.f },
-                    .size = Vector2 { 100.f, 25.f },
+                    .size = WALL_SIZE_DEFAULT,
                     .health = 1,
+                    .rot = Radian { 0.f },
                     .type = EnemyType::Normal,
                     .contributes_to_win = true
                 });
@@ -75,15 +76,39 @@ namespace woc
             {
                 enemies.emplace_back(EnemyState {
                     .pos = Vector2 { -200.f, -300.f },
-                    .size = Vector2 { 300.f, 25.f },
+                    .size = WALL_SIZE_L,
                     .health = 1,
+                    .rot = Radian { 0.f },
                     .type = EnemyType::Normal,
                     .contributes_to_win = true
                 });
                 enemies.emplace_back(EnemyState {
                     .pos = Vector2 { -200.f, 300.f },
-                    .size = Vector2 { 1000.f, 25.f },
+                    .size = WALL_SIZE_XL,
                     .health = 0,
+                    .rot = Radian { 0.f },
+                    .type = EnemyType::Indestructible,
+                    .contributes_to_win = false
+                });
+                game_state.player.balls_available = 1;
+                game_state.player.wind_available = 1;
+                break;
+            }
+            case 3:
+            {
+                enemies.emplace_back(EnemyState {
+                    .pos = Vector2 { WORLD_MAX.x, -300.f },
+                    .size = WALL_SIZE_DEFAULT,
+                    .health = 1,
+                    .rot = Radian { PI / 2.f },
+                    .type = EnemyType::Normal,
+                    .contributes_to_win = true
+                });
+                enemies.emplace_back(EnemyState {
+                    .pos = Vector2 { 0.f, WORLD_MAX.y },
+                    .size = WALL_SIZE_DEFAULT,
+                    .health = 0,
+                    .rot = Radian { 0.f },
                     .type = EnemyType::Indestructible,
                     .contributes_to_win = false
                 });
@@ -345,6 +370,7 @@ namespace woc
                 dee.emplace_back(EnemyDeadEffect {
                     .pos = e.pos,
                     .size = e.size,
+                    .rot = e.rot,
                     .timer = ENEMY_DEAD_EFFECT_DURATION
                 });
                 return true;
@@ -675,16 +701,18 @@ namespace woc
         for (auto& e : game_state.enemies)
         {
             auto half_size = Vector2Scale(e.size, 0.5f);
-            auto e_rect = Rectangle {e.pos.x - half_size.x, e.pos.y - half_size.y, e.size.x, e.size.y };
+            auto disp = Vector2 { -half_size.x, -half_size.y };
+            disp = Vector2Rotate(disp, e.rot.val);
+            auto e_rect = Rectangle {e.pos.x + disp.x, e.pos.y + disp.y, e.size.x, e.size.y };
             switch (e.type)
             {
                 case EnemyType::Indestructible: {
-                    DrawRectanglePro(e_rect, Vector2Zero(), 0.f, INDESTRUCTIBLE_WALL_COLOR);
+                    DrawRectanglePro(e_rect, Vector2Zero(), e.rot.val * RAD2DEG, INDESTRUCTIBLE_WALL_COLOR);
                     DrawRectangleLinesEx(e_rect, 2.0f, BLACK);
                     break;
                 }
                 case EnemyType::Normal: {
-                    DrawRectanglePro(e_rect, Vector2Zero(), 0.f, WALL_COLOR);
+                    DrawRectanglePro(e_rect, Vector2Zero(), e.rot.val * RAD2DEG, WALL_COLOR);
                     auto health_rect = e_rect;
                     for (auto i = 0; i < e.health; i++)
                     {
@@ -705,8 +733,10 @@ namespace woc
             auto alpha_eased = ease_in_back(alpha);
             auto size = Vector2Scale(e.size, alpha_eased);
             auto half_size = Vector2Scale(size, 0.5f);
-            auto e_rect = Rectangle {e.pos.x - half_size.x, e.pos.y - half_size.y, size.x, size.y };
-            DrawRectanglePro(e_rect, Vector2Zero(), 0.f, WALL_COLOR);
+            auto disp = Vector2 { -half_size.x, -half_size.y };
+            disp = Vector2Rotate(disp, e.rot.val);
+            auto e_rect = Rectangle {e.pos.x + disp.x, e.pos.y + disp.y, size.x, size.y };
+            DrawRectanglePro(e_rect, Vector2Zero(), e.rot.val * RAD2DEG, WHITE);
         }
         
         if (game_state.player.balls_available)
@@ -723,7 +753,7 @@ namespace woc
             auto alpha = p.timer / PROJECTILE_DEAD_EFFECT_DURATION;
             auto alpha_eased = ease_in_back(alpha);
             auto size = BALL_DEFAULT_RADIUS * alpha_eased;
-            DrawCircleV(p.pos, size, BALL_COLOR);
+            DrawCircleV(p.pos, size, WHITE);
         }
 
         EndMode2D();

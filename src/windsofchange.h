@@ -35,8 +35,8 @@ namespace woc
     using f64 = double;
     
     constexpr f32 WIND_DURATION = 0.75f;
-    constexpr u32 START_LEVEL = 0;
-    constexpr u32 END_LEVEL = 2;
+    constexpr u32 START_LEVEL = 3;
+    constexpr u32 END_LEVEL = 3;
     constexpr Vector2 WORLD_MIN = Vector2{ -700, -500 };
     constexpr Vector2 WORLD_MAX = Vector2{ 700, 500 };
     constexpr f32 PLAYER_WORLD_Y = 400.f;
@@ -46,6 +46,10 @@ namespace woc
     constexpr f32 BALL_DEFAULT_RADIUS = 10.f;
     constexpr f32 BALL_DEFAULT_Y_OFFSET = 25.f;
     constexpr f32 MIN_TIME_BETWEEN_COLLISIONS = 0.25f;
+    
+    constexpr Vector2 WALL_SIZE_DEFAULT = Vector2{ 200, 25 };
+    constexpr Vector2 WALL_SIZE_L = Vector2{ 400, 25 };
+    constexpr Vector2 WALL_SIZE_XL = Vector2{ 600, 25 };
     
     constexpr f32 ENEMY_DEAD_EFFECT_DURATION = 0.5f;
     constexpr f32 PROJECTILE_DEAD_EFFECT_DURATION = 1.0f;
@@ -141,6 +145,7 @@ namespace woc
     struct EnemyDeadEffect {
         Vector2 pos;
         Vector2 size;
+        Radian rot;
         f32 timer;
     };
 

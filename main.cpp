@@ -2,8 +2,7 @@
 #include "src/window.cpp"
 
 // TODO:
-// - SFX: Send ball, Use wind, Ball disappear, Level lost, Level won, Wall disappear, Game won
-// - Polish: Tweak ball movement speed, Add more levels
+// - Polish: Add more levels
 // - Fix: input issue
 // - Extra: Add moving walls
 // - Test on other PC
